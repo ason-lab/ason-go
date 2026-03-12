@@ -1019,7 +1019,7 @@ func TestCrossCompat_SkipStringContainingAsonSyntax(t *testing.T) {
 	src := SrcAsonLike{
 		ID:   1,
 		Data: `{a,b}:(1,2)`,
-		Code: `[(x,y),(z,w)]`,
+		Code: `<x:y,z:w>`,
 	}
 	data, err := Encode(src)
 	if err != nil {

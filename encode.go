@@ -23,6 +23,9 @@ var needsQuote = func() [256]bool {
 	t[')'] = true
 	t['['] = true
 	t[']'] = true
+	t['<'] = true
+	t['>'] = true
+	t[':'] = true
 	t['"'] = true
 	t['\\'] = true
 	return t
@@ -199,7 +202,7 @@ func stringNeedsQuoting(s string) bool {
 	if len(s) == 0 {
 		return true
 	}
-	b := *(*[]byte)(unsafe.Pointer(&s))
+	b := []byte(s)
 	if b[0] == ' ' || b[len(b)-1] == ' ' {
 		return true
 	}
@@ -227,7 +230,7 @@ func stringNeedsQuoting(s string) bool {
 
 func appendEscaped(buf []byte, s string) []byte {
 	buf = append(buf, '"')
-	b := *(*[]byte)(unsafe.Pointer(&s))
+	b := []byte(s)
 	start := 0
 	for i := 0; i < len(b); i++ {
 		esc := escapeChar[b[i]]
@@ -373,65 +376,77 @@ func appendStructSchema(buf []byte, si *structInfo, typed bool) []byte {
 // Primitive fields only get type annotations in typed mode.
 func appendFieldSchema(buf []byte, fi fieldInfo, typed bool) []byte {
 	buf = append(buf, fi.name...)
+	buf, _ = appendTypeSchema(buf, fi.fieldType, typed, true)
+	return buf
+}
 
-	ft := fi.fieldType
-	for ft.Kind() == reflect.Ptr {
-		ft = ft.Elem()
+func appendTypeSchema(buf []byte, t reflect.Type, typed bool, withColon bool) ([]byte, bool) {
+	if !typed {
+		return buf, false
+	}
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if withColon {
+		buf = append(buf, ':')
 	}
 
-	switch ft.Kind() {
+	switch t.Kind() {
 	case reflect.Struct:
-		// Always output nested struct schema: field:{f1,f2,...}
-		nested := getStructInfo(ft)
-		buf = append(buf, ':')
-		buf = appendStructSchema(buf, nested, typed)
+		return appendStructSchema(buf, getStructInfo(t), typed), true
 	case reflect.Slice:
-		elemType := ft.Elem()
+		elemType := t.Elem()
 		for elemType.Kind() == reflect.Ptr {
 			elemType = elemType.Elem()
 		}
+		buf = append(buf, '[')
 		if elemType.Kind() == reflect.Struct {
-			// Always output nested struct-array schema: field:[{f1,f2,...}]
-			nested := getStructInfo(elemType)
-			buf = append(buf, ':')
-			buf = append(buf, '[')
-			buf = appendStructSchema(buf, nested, typed)
+			buf = appendStructSchema(buf, getStructInfo(elemType), typed)
 			buf = append(buf, ']')
-		} else if typed {
-			hint := typeHintForKind(elemType.Kind())
-			if hint != "" {
-				buf = append(buf, ':', '[')
-				buf = append(buf, hint...)
-				buf = append(buf, ']')
-			}
+			return buf, true
 		}
+		hint := typeHintForKind(elemType.Kind())
+		if hint == "" {
+			if withColon {
+				return buf[:len(buf)-1], false
+			}
+			return buf, false
+		}
+		buf = append(buf, hint...)
+		buf = append(buf, ']')
+		return buf, true
 	case reflect.Map:
-		if typed {
-			keyHint := typeHintForKind(ft.Key().Kind())
-			valType := ft.Elem()
-			for valType.Kind() == reflect.Ptr {
-				valType = valType.Elem()
+		keyHint := typeHintForKind(t.Key().Kind())
+		if keyHint == "" {
+			if withColon {
+				return buf[:len(buf)-1], false
 			}
-			valHint := typeHintForKind(valType.Kind())
-			if keyHint != "" && valHint != "" {
-				buf = append(buf, ':')
-				buf = append(buf, "map["...)
-				buf = append(buf, keyHint...)
-				buf = append(buf, ',')
-				buf = append(buf, valHint...)
-				buf = append(buf, ']')
-			}
+			return buf, false
 		}
+		buf = append(buf, '<')
+		buf = append(buf, keyHint...)
+		buf = append(buf, ':')
+		var ok bool
+		buf, ok = appendTypeSchema(buf, t.Elem(), typed, false)
+		if !ok {
+			if withColon {
+				return buf[:len(buf)-(len(keyHint)+3)], false
+			}
+			return buf[:len(buf)-(len(keyHint)+2)], false
+		}
+		buf = append(buf, '>')
+		return buf, true
 	default:
-		if typed {
-			hint := typeHintForKind(ft.Kind())
-			if hint != "" {
-				buf = append(buf, ':')
-				buf = append(buf, hint...)
+		hint := typeHintForKind(t.Kind())
+		if hint == "" {
+			if withColon {
+				return buf[:len(buf)-1], false
 			}
+			return buf, false
 		}
+		buf = append(buf, hint...)
+		return buf, true
 	}
-	return buf
 }
 
 func typeHintForKind(k reflect.Kind) string {
@@ -688,21 +703,19 @@ func marshalSliceValue(buf []byte, fv reflect.Value) []byte {
 }
 
 func marshalMapValue(buf []byte, fv reflect.Value) []byte {
-	buf = append(buf, '[')
+	buf = append(buf, '<')
 	iter := fv.MapRange()
 	first := true
 	for iter.Next() {
 		if !first {
-			buf = append(buf, ',')
+			buf = append(buf, ',', ' ')
 		}
 		first = false
-		buf = append(buf, '(')
 		buf = marshalNestedValue(buf, iter.Key())
-		buf = append(buf, ',')
+		buf = append(buf, ':')
 		buf = marshalNestedValue(buf, iter.Value())
-		buf = append(buf, ')')
 	}
-	buf = append(buf, ']')
+	buf = append(buf, '>')
 	return buf
 }
 

@@ -226,12 +226,9 @@ func (d *decoder) parseSchema() ([]string, error) {
 				if err := d.skipBalanced('[', ']'); err != nil {
 					return nil, err
 				}
-			} else if d.pos+3 <= len(d.data) && string(d.data[d.pos:d.pos+3]) == "map" {
-				d.pos += 3
-				if d.pos < len(d.data) && d.data[d.pos] == '[' {
-					if err := d.skipBalanced('[', ']'); err != nil {
-						return nil, err
-					}
+			} else if d.pos < len(d.data) && d.data[d.pos] == '<' {
+				if err := d.skipBalanced('<', '>'); err != nil {
+					return nil, err
 				}
 			} else {
 				for d.pos < len(d.data) {
@@ -485,7 +482,7 @@ func (d *decoder) atValueEnd() bool {
 		return true
 	}
 	b := d.data[d.pos]
-	return b == ',' || b == ')' || b == ']'
+	return b == ',' || b == ')' || b == ']' || b == '>' || b == ':'
 }
 
 func (d *decoder) parseBool() (bool, error) {
@@ -506,7 +503,7 @@ func (d *decoder) parseBool() (bool, error) {
 }
 
 func isDelim(b byte) bool {
-	return b == ',' || b == ')' || b == ']' || b == ' ' || b == '\t' || b == '\n' || b == '\r'
+	return b == ',' || b == ')' || b == ']' || b == '>' || b == ':' || b == ' ' || b == '\t' || b == '\n' || b == '\r'
 }
 
 func (d *decoder) parseInt64() (int64, error) {
@@ -640,7 +637,7 @@ func (d *decoder) parsePlainValue() (string, error) {
 	hasEscape := false
 	for d.pos < len(d.data) {
 		b := d.data[d.pos]
-		if b == ',' || b == ')' || b == ']' {
+		if b == ',' || b == ')' || b == ']' || b == '>' || b == ':' {
 			break
 		}
 		if b == '\\' {
@@ -726,6 +723,12 @@ func (d *decoder) parseQuotedString() (string, error) {
 				buf = append(buf, '[')
 			case ']':
 				buf = append(buf, ']')
+			case '<':
+				buf = append(buf, '<')
+			case '>':
+				buf = append(buf, '>')
+			case ':':
+				buf = append(buf, ':')
 			case 'u':
 				if d.pos+4 > len(d.data) {
 					return "", d.errorf("invalid unicode escape")
@@ -768,6 +771,12 @@ func unescapePlain(raw []byte) (string, error) {
 				buf = append(buf, '[')
 			case ']':
 				buf = append(buf, ']')
+			case '<':
+				buf = append(buf, '<')
+			case '>':
+				buf = append(buf, '>')
+			case ':':
+				buf = append(buf, ':')
 			case '"':
 				buf = append(buf, '"')
 			case '\\':
@@ -971,8 +980,8 @@ func (d *decoder) unmarshalSlice(fv reflect.Value) error {
 
 func (d *decoder) unmarshalMap(fv reflect.Value) error {
 	d.skipWhitespaceAndComments()
-	if d.pos >= len(d.data) || d.data[d.pos] != '[' {
-		return d.errorf("expected '['")
+	if d.pos >= len(d.data) || d.data[d.pos] != '<' {
+		return d.errorf("expected '<'")
 	}
 	d.pos++
 
@@ -983,7 +992,7 @@ func (d *decoder) unmarshalMap(fv reflect.Value) error {
 	first := true
 	for {
 		d.skipWhitespaceAndComments()
-		if d.pos >= len(d.data) || d.data[d.pos] == ']' {
+		if d.pos >= len(d.data) || d.data[d.pos] == '>' {
 			d.pos++
 			break
 		}
@@ -991,7 +1000,7 @@ func (d *decoder) unmarshalMap(fv reflect.Value) error {
 			if d.data[d.pos] == ',' {
 				d.pos++
 				d.skipWhitespaceAndComments()
-				if d.pos < len(d.data) && d.data[d.pos] == ']' {
+				if d.pos < len(d.data) && d.data[d.pos] == '>' {
 					d.pos++
 					break
 				}
@@ -1001,30 +1010,20 @@ func (d *decoder) unmarshalMap(fv reflect.Value) error {
 		}
 		first = false
 
-		// Expect (key,val)
-		if d.pos >= len(d.data) || d.data[d.pos] != '(' {
-			return d.errorf("expected '(' in map entry")
-		}
-		d.pos++
-
 		key := reflect.New(keyType).Elem()
 		if err := d.unmarshalValue(key); err != nil {
 			return err
 		}
 
 		d.skipWhitespaceAndComments()
-		if d.pos < len(d.data) && d.data[d.pos] == ',' {
-			d.pos++
+		if d.pos >= len(d.data) || d.data[d.pos] != ':' {
+			return d.errorf("expected ':' in map entry")
 		}
+		d.pos++
 
 		val := reflect.New(valType).Elem()
 		if err := d.unmarshalValue(val); err != nil {
 			return err
-		}
-
-		d.skipWhitespaceAndComments()
-		if d.pos < len(d.data) && d.data[d.pos] == ')' {
-			d.pos++
 		}
 
 		m.SetMapIndex(key, val)

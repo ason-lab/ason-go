@@ -25,6 +25,15 @@ type WithMap struct {
 	Attrs map[string]int64 `ason:"attrs" json:"attrs"`
 }
 
+type Person struct {
+	Name string `ason:"name" json:"name"`
+	Age  int64  `ason:"age" json:"age"`
+}
+
+type WithComplexMap struct {
+	Groups map[string][]Person `ason:"groups" json:"groups"`
+}
+
 type Nested struct {
 	Name string  `ason:"name" json:"name"`
 	Addr Address `ason:"addr" json:"addr"`
@@ -197,10 +206,18 @@ func main() {
 	// 3. Map/Dict field
 	fmt.Println("\n3. Map/Dict field:")
 	var wm WithMap
-	if err := ason.Decode([]byte("{name,attrs}:(Alice,[(age,30),(score,95)])"), &wm); err != nil {
+	if err := ason.Decode([]byte("{name,attrs}:(Alice,<age:30,score:95>)"), &wm); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   %+v\n", wm)
+
+	// 3b. Complex map field
+	fmt.Println("\n3b. Complex map field:")
+	var groups WithComplexMap
+	if err := ason.Decode([]byte("{groups:<str:[{name:str,age:int}]>}:(<teamA:[(Alice,30),(Bob,28)],teamB:[(Carol,41)]>)"), &groups); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("   %+v\n", groups)
 
 	// 4. Nested struct roundtrip
 	fmt.Println("\n4. Nested struct roundtrip:")

@@ -1,6 +1,7 @@
 package ason
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 )
@@ -225,7 +226,7 @@ func TestMapField(t *testing.T) {
 		Name  string           `ason:"name"`
 		Attrs map[string]int64 `ason:"attrs"`
 	}
-	input := "{name,attrs}:(Alice,[(age,30),(score,95)])"
+	input := "{name,attrs}:(Alice,<age:30,score:95>)"
 	var item MapItem
 	if err := Decode([]byte(input), &item); err != nil {
 		t.Fatal(err)
@@ -324,8 +325,8 @@ func TestAnnotatedWithMap(t *testing.T) {
 		Name  string           `ason:"name"`
 		Attrs map[string]int64 `ason:"attrs"`
 	}
-	typed := "{name:str,attrs:map[str,int]}:(server,[(port,8080),(timeout,30)])"
-	untyped := "{name,attrs}:(server,[(port,8080),(timeout,30)])"
+	typed := "{name:str,attrs:<str:int>}:(server,<port:8080,timeout:30>)"
+	untyped := "{name,attrs}:(server,<port:8080,timeout:30>)"
 	var c1, c2 Config
 	if err := Decode([]byte(typed), &c1); err != nil {
 		t.Fatal(err)
@@ -338,6 +339,85 @@ func TestAnnotatedWithMap(t *testing.T) {
 	}
 	if c1.Attrs["port"] != 8080 {
 		t.Fatalf("unexpected port")
+	}
+}
+
+func TestComplexMapRoundtrip(t *testing.T) {
+	type Person struct {
+		Name string `ason:"name"`
+		Age  int64  `ason:"age"`
+	}
+	type Groups struct {
+		Groups map[string][]Person `ason:"groups"`
+	}
+	src := Groups{
+		Groups: map[string][]Person{
+			"teamA": {
+				{Name: "Alice", Age: 30},
+				{Name: "Bob", Age: 28},
+			},
+			"teamB": {
+				{Name: "Carol", Age: 41},
+			},
+		},
+	}
+	data, err := Encode(&src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out Groups
+	if err := Decode(data, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(src, out) {
+		t.Fatalf("mismatch: %#v vs %#v", src, out)
+	}
+}
+
+func TestAnnotatedWithComplexMap(t *testing.T) {
+	type Person struct {
+		Name string `ason:"name"`
+		Age  int64  `ason:"age"`
+	}
+	type Groups struct {
+		Groups map[string][]Person `ason:"groups"`
+	}
+	typed := "{groups:<str:[{name:str,age:int}]>}:(<teamA:[(Alice,30),(Bob,28)],teamB:[(Carol,41)]>)"
+	untyped := "{groups}:(<teamA:[(Alice,30),(Bob,28)],teamB:[(Carol,41)]>)"
+	var g1, g2 Groups
+	if err := Decode([]byte(typed), &g1); err != nil {
+		t.Fatal(err)
+	}
+	if err := Decode([]byte(untyped), &g2); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(g1, g2) {
+		t.Fatalf("mismatch: %#v vs %#v", g1, g2)
+	}
+	if len(g1.Groups["teamA"]) != 2 || g1.Groups["teamA"][0].Name != "Alice" || g1.Groups["teamB"][0].Age != 41 {
+		t.Fatalf("unexpected: %#v", g1)
+	}
+}
+
+func TestEncodeTypedComplexMapSchema(t *testing.T) {
+	type Person struct {
+		Name string `ason:"name"`
+		Age  int64  `ason:"age"`
+	}
+	type Groups struct {
+		Groups map[string][]Person `ason:"groups"`
+	}
+	src := Groups{
+		Groups: map[string][]Person{
+			"teamA": {{Name: "Alice", Age: 30}},
+		},
+	}
+	data, err := EncodeTyped(&src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte("groups:<str:[{name:str,age:int}]>")) {
+		t.Fatalf("missing complex map schema: %s", data)
 	}
 }
 

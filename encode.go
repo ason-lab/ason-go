@@ -269,6 +269,7 @@ type structInfo struct {
 	structType         reflect.Type   // the struct type these fields belong to
 	nameIndex          map[string]int // field name → index in fields slice
 	identityFieldMap   []int
+	fieldMapCache      sync.Map // map[string][]int
 	headerOnce         sync.Once
 	headerUntyped      []byte
 	headerTyped        []byte

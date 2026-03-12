@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"unsafe"
 )
 
@@ -68,7 +69,7 @@ func (d *decoder) decodeSliceTop(v any) error {
 	if d.pos >= len(d.data) || d.data[d.pos] != '{' {
 		return d.errorf("expected '{'")
 	}
-	fields, err := d.parseSchema()
+	fields, schemaKey, err := d.parseSchema()
 	if err != nil {
 		return err
 	}
@@ -84,7 +85,7 @@ func (d *decoder) decodeSliceTop(v any) error {
 	d.pos++
 
 	si := getStructInfo(elemType)
-	fieldMap := buildFieldMap(si, fields)
+	fieldMap := buildFieldMapCached(si, fields, schemaKey)
 	if sliceVal.Type().Elem().Kind() == reflect.Struct {
 		if rowCount := countTopLevelTupleRows(d.data, d.pos); rowCount > 0 {
 			sliceVal = reflect.MakeSlice(sliceVal.Type(), rowCount, rowCount)
@@ -156,6 +157,102 @@ func (d *decoder) decodeSliceTop(v any) error {
 type decoder struct {
 	data []byte
 	pos  int
+}
+
+var schemaFieldsCache sync.Map // map[string][]string
+
+func countTopLevelEntries(data []byte, start int, open, close byte) int {
+	if start >= len(data) || data[start] != open {
+		return 0
+	}
+	depthParen, depthBracket, depthAngle := 0, 0, 0
+	inString := false
+	count := 0
+	hasValue := false
+	for i := start + 1; i < len(data); i++ {
+		b := data[i]
+		if inString {
+			if b == '\\' && i+1 < len(data) {
+				i++
+				continue
+			}
+			if b == '"' {
+				inString = false
+			}
+			hasValue = true
+			continue
+		}
+		if b == '"' {
+			inString = true
+			hasValue = true
+			continue
+		}
+		if b == '/' && i+1 < len(data) && data[i+1] == '*' {
+			i += 2
+			for i+1 < len(data) && !(data[i] == '*' && data[i+1] == '/') {
+				i++
+			}
+			if i+1 < len(data) {
+				i++
+			}
+			continue
+		}
+		switch b {
+		case '(':
+			depthParen++
+			hasValue = true
+		case ')':
+			if depthParen > 0 {
+				depthParen--
+			}
+		case '[':
+			depthBracket++
+			hasValue = true
+		case ']':
+			if depthBracket > 0 {
+				depthBracket--
+			} else if close == ']' {
+				if hasValue {
+					count++
+				}
+				return count
+			}
+		case '<':
+			depthAngle++
+			hasValue = true
+		case '>':
+			if depthAngle > 0 {
+				depthAngle--
+			} else if close == '>' {
+				if hasValue {
+					count++
+				}
+				return count
+			}
+		case ',':
+			if depthParen == 0 && depthBracket == 0 && depthAngle == 0 {
+				if hasValue {
+					count++
+					hasValue = false
+				}
+			} else {
+				hasValue = true
+			}
+		default:
+			if b == close && depthParen == 0 && depthBracket == 0 && depthAngle == 0 {
+				if hasValue {
+					count++
+				}
+				return count
+			}
+			switch b {
+			case ' ', '\t', '\n', '\r':
+			default:
+				hasValue = true
+			}
+		}
+	}
+	return count
 }
 
 func countTopLevelTupleRows(data []byte, start int) int {
@@ -263,9 +360,109 @@ func (d *decoder) skipWhitespaceAndComments() {
 
 // parseSchema parses {field1,field2,...} or {field1:type1,field2:type2,...}
 // Returns field names only (type annotations are skipped).
-func (d *decoder) parseSchema() ([]string, error) {
+func skipInlineWhitespace(data []byte, pos int) int {
+	for pos < len(data) && (data[pos] == ' ' || data[pos] == '\t') {
+		pos++
+	}
+	return pos
+}
+
+func scanBalancedEnd(data []byte, pos int, open, close byte) (int, error) {
+	depth := 0
+	for pos < len(data) {
+		b := data[pos]
+		pos++
+		if b == open {
+			depth++
+		} else if b == close {
+			depth--
+			if depth == 0 {
+				return pos, nil
+			}
+		}
+	}
+	return 0, &UnmarshalError{pos, "unbalanced brackets"}
+}
+
+func scanSchemaEnd(data []byte, pos int) (int, error) {
+	if pos >= len(data) || data[pos] != '{' {
+		return 0, &UnmarshalError{pos, "expected '{'"}
+	}
+	pos++
+	fieldCount := 0
+	for {
+		pos = skipInlineWhitespace(data, pos)
+		if pos >= len(data) {
+			return 0, &UnmarshalError{pos, "unexpected EOF in schema"}
+		}
+		if data[pos] == '}' {
+			return pos + 1, nil
+		}
+		if fieldCount > 0 {
+			if data[pos] != ',' {
+				return 0, &UnmarshalError{pos, "expected ','"}
+			}
+			pos++
+			pos = skipInlineWhitespace(data, pos)
+		}
+		for pos < len(data) {
+			b := data[pos]
+			if b == ',' || b == '}' || b == ':' || b == ' ' || b == '\t' {
+				break
+			}
+			pos++
+		}
+		pos = skipInlineWhitespace(data, pos)
+		if pos < len(data) && data[pos] == ':' {
+			pos++
+			pos = skipInlineWhitespace(data, pos)
+			if pos >= len(data) {
+				return 0, &UnmarshalError{pos, "unexpected EOF in schema"}
+			}
+			switch data[pos] {
+			case '{':
+				end, err := scanBalancedEnd(data, pos, '{', '}')
+				if err != nil {
+					return 0, err
+				}
+				pos = end
+			case '[':
+				end, err := scanBalancedEnd(data, pos, '[', ']')
+				if err != nil {
+					return 0, err
+				}
+				pos = end
+			case '<':
+				end, err := scanBalancedEnd(data, pos, '<', '>')
+				if err != nil {
+					return 0, err
+				}
+				pos = end
+			default:
+				for pos < len(data) {
+					b := data[pos]
+					if b == ',' || b == '}' || b == ' ' || b == '\t' {
+						break
+					}
+					pos++
+				}
+			}
+		}
+		fieldCount++
+	}
+}
+
+func (d *decoder) parseSchema() ([]string, string, error) {
 	if d.data[d.pos] != '{' {
-		return nil, d.errorf("expected '{'")
+		return nil, "", d.errorf("expected '{'")
+	}
+	start := d.pos
+	if end, err := scanSchemaEnd(d.data, start); err == nil {
+		key := unsafeString(d.data[start:end])
+		if cached, ok := schemaFieldsCache.Load(key); ok {
+			d.pos = end
+			return cached.([]string), key, nil
+		}
 	}
 	d.pos++
 
@@ -273,7 +470,7 @@ func (d *decoder) parseSchema() ([]string, error) {
 	for {
 		d.skipWhitespace()
 		if d.pos >= len(d.data) {
-			return nil, d.errorf("unexpected EOF in schema")
+			return nil, "", d.errorf("unexpected EOF in schema")
 		}
 		if d.data[d.pos] == '}' {
 			d.pos++
@@ -281,7 +478,7 @@ func (d *decoder) parseSchema() ([]string, error) {
 		}
 		if len(fields) > 0 {
 			if d.data[d.pos] != ',' {
-				return nil, d.errorf("expected ','")
+				return nil, "", d.errorf("expected ','")
 			}
 			d.pos++
 			d.skipWhitespace()
@@ -305,15 +502,15 @@ func (d *decoder) parseSchema() ([]string, error) {
 			d.skipWhitespace()
 			if d.pos < len(d.data) && d.data[d.pos] == '{' {
 				if err := d.skipBalanced('{', '}'); err != nil {
-					return nil, err
+					return nil, "", err
 				}
 			} else if d.pos < len(d.data) && d.data[d.pos] == '[' {
 				if err := d.skipBalanced('[', ']'); err != nil {
-					return nil, err
+					return nil, "", err
 				}
 			} else if d.pos < len(d.data) && d.data[d.pos] == '<' {
 				if err := d.skipBalanced('<', '>'); err != nil {
-					return nil, err
+					return nil, "", err
 				}
 			} else {
 				for d.pos < len(d.data) {
@@ -328,7 +525,9 @@ func (d *decoder) parseSchema() ([]string, error) {
 
 		fields = append(fields, name)
 	}
-	return fields, nil
+	key := unsafeString(d.data[start:d.pos])
+	schemaFieldsCache.Store(key, fields)
+	return fields, key, nil
 }
 
 func (d *decoder) skipBalanced(open, close byte) error {
@@ -376,6 +575,20 @@ func buildFieldMap(si *structInfo, schemaFields []string) []int {
 	return m
 }
 
+func buildFieldMapCached(si *structInfo, schemaFields []string, schemaKey string) []int {
+	if schemaKey != "" {
+		if cached, ok := si.fieldMapCache.Load(schemaKey); ok {
+			return cached.([]int)
+		}
+	}
+	fieldMap := buildFieldMap(si, schemaFields)
+	if schemaKey != "" {
+		actual, _ := si.fieldMapCache.LoadOrStore(schemaKey, fieldMap)
+		return actual.([]int)
+	}
+	return fieldMap
+}
+
 func isIdentityFieldMap(si *structInfo, fieldMap []int) bool {
 	if len(fieldMap) != len(si.identityFieldMap) {
 		return false
@@ -413,7 +626,7 @@ func (d *decoder) unmarshalTop(v any) error {
 	if d.pos >= len(d.data) || d.data[d.pos] != '{' {
 		return d.errorf("expected '{'")
 	}
-	fields, err := d.parseSchema()
+	fields, schemaKey, err := d.parseSchema()
 	if err != nil {
 		return err
 	}
@@ -425,7 +638,7 @@ func (d *decoder) unmarshalTop(v any) error {
 	d.pos++
 	d.skipWhitespaceAndComments()
 
-	fieldMap := buildFieldMap(si, fields)
+	fieldMap := buildFieldMapCached(si, fields, schemaKey)
 	return d.unmarshalTuple(rv, si, fieldMap)
 }
 
@@ -1118,9 +1331,56 @@ func (d *decoder) unmarshalSlice(fv reflect.Value) error {
 	if d.pos >= len(d.data) || d.data[d.pos] != '[' {
 		return d.errorf("expected '['")
 	}
+	elemCount := countTopLevelEntries(d.data, d.pos, '[', ']')
 	d.pos++
 
 	elemType := fv.Type().Elem()
+	if elemCount > 0 {
+		slice := reflect.MakeSlice(fv.Type(), elemCount, elemCount)
+		first := true
+		decoded := 0
+		for decoded < elemCount {
+			d.skipWhitespaceAndComments()
+			if d.pos >= len(d.data) || d.data[d.pos] == ']' {
+				if d.pos < len(d.data) && d.data[d.pos] == ']' {
+					d.pos++
+				}
+				break
+			}
+			if !first {
+				if d.data[d.pos] == ',' {
+					d.pos++
+					d.skipWhitespaceAndComments()
+					if d.pos < len(d.data) && d.data[d.pos] == ']' {
+						d.pos++
+						break
+					}
+				} else {
+					break
+				}
+			}
+			first = false
+
+			elem := slice.Index(decoded)
+			if elemType.Kind() == reflect.Struct {
+				if err := d.unmarshalNestedStruct(elem); err != nil {
+					return err
+				}
+			} else {
+				if err := d.unmarshalValue(elem); err != nil {
+					return err
+				}
+			}
+			decoded++
+		}
+		d.skipWhitespaceAndComments()
+		if d.pos < len(d.data) && d.data[d.pos] == ']' {
+			d.pos++
+		}
+		fv.Set(slice.Slice(0, decoded))
+		return nil
+	}
+
 	slice := reflect.MakeSlice(fv.Type(), 0, 4)
 
 	first := true
@@ -1226,7 +1486,7 @@ func (d *decoder) unmarshalNestedStruct(fv reflect.Value) error {
 	// Check for inline schema: {field1,field2,...}:(val1,val2,...)
 	if d.data[d.pos] == '{' {
 		si := getStructInfo(fv.Type())
-		fields, err := d.parseSchema()
+		fields, schemaKey, err := d.parseSchema()
 		if err != nil {
 			return err
 		}
@@ -1236,7 +1496,7 @@ func (d *decoder) unmarshalNestedStruct(fv reflect.Value) error {
 		}
 		d.pos++
 		d.skipWhitespaceAndComments()
-		fieldMap := buildFieldMap(si, fields)
+		fieldMap := buildFieldMapCached(si, fields, schemaKey)
 		return d.unmarshalTuple(fv, si, fieldMap)
 	}
 

@@ -85,6 +85,39 @@ func (d *decoder) decodeSliceTop(v any) error {
 
 	si := getStructInfo(elemType)
 	fieldMap := buildFieldMap(si, fields)
+	if sliceVal.Type().Elem().Kind() == reflect.Struct {
+		if rowCount := countTopLevelTupleRows(d.data, d.pos); rowCount > 0 {
+			sliceVal = reflect.MakeSlice(sliceVal.Type(), rowCount, rowCount)
+			exact := isIdentityFieldMap(si, fieldMap)
+			decoded := 0
+			for decoded < rowCount {
+				d.skipWhitespaceAndComments()
+				if d.pos >= len(d.data) || d.data[d.pos] != '(' {
+					break
+				}
+				elem := sliceVal.Index(decoded)
+				if exact {
+					err = d.unmarshalTupleExact(elem, si)
+				} else {
+					err = d.unmarshalTuple(elem, si, fieldMap)
+				}
+				if err != nil {
+					return err
+				}
+				decoded++
+				d.skipWhitespaceAndComments()
+				if d.pos < len(d.data) && d.data[d.pos] == ',' {
+					d.pos++
+					d.skipWhitespaceAndComments()
+					if d.pos >= len(d.data) || d.data[d.pos] != '(' {
+						break
+					}
+				}
+			}
+			rv.Elem().Set(sliceVal.Slice(0, decoded))
+			return nil
+		}
+	}
 
 	// Parse rows
 	for {
@@ -123,6 +156,58 @@ func (d *decoder) decodeSliceTop(v any) error {
 type decoder struct {
 	data []byte
 	pos  int
+}
+
+func countTopLevelTupleRows(data []byte, start int) int {
+	depthBracket, depthAngle := 0, 0
+	inString := false
+	count := 0
+	for i := start; i < len(data); i++ {
+		b := data[i]
+		if inString {
+			if b == '\\' && i+1 < len(data) {
+				i++
+				continue
+			}
+			if b == '"' {
+				inString = false
+			}
+			continue
+		}
+		if b == '"' {
+			inString = true
+			continue
+		}
+		if b == '/' && i+1 < len(data) && data[i+1] == '*' {
+			i += 2
+			for i+1 < len(data) && !(data[i] == '*' && data[i+1] == '/') {
+				i++
+			}
+			if i+1 < len(data) {
+				i++
+			}
+			continue
+		}
+		switch b {
+		case '[':
+			depthBracket++
+		case ']':
+			if depthBracket > 0 {
+				depthBracket--
+			}
+		case '<':
+			depthAngle++
+		case '>':
+			if depthAngle > 0 {
+				depthAngle--
+			}
+		case '(':
+			if depthBracket == 0 && depthAngle == 0 {
+				count++
+			}
+		}
+	}
+	return count
 }
 
 func (d *decoder) errorf(format string, args ...any) *UnmarshalError {
@@ -268,6 +353,18 @@ func (d *decoder) skipBalanced(open, close byte) error {
 // ---------------------------------------------------------------------------
 
 func buildFieldMap(si *structInfo, schemaFields []string) []int {
+	if len(schemaFields) == len(si.fields) {
+		exact := true
+		for i, name := range schemaFields {
+			if si.fields[i].name != name {
+				exact = false
+				break
+			}
+		}
+		if exact {
+			return si.identityFieldMap
+		}
+	}
 	m := make([]int, len(schemaFields))
 	for i, name := range schemaFields {
 		if idx, ok := si.nameIndex[name]; ok {
@@ -277,6 +374,23 @@ func buildFieldMap(si *structInfo, schemaFields []string) []int {
 		}
 	}
 	return m
+}
+
+func isIdentityFieldMap(si *structInfo, fieldMap []int) bool {
+	if len(fieldMap) != len(si.identityFieldMap) {
+		return false
+	}
+	if len(fieldMap) == 0 {
+		return true
+	}
+	return &fieldMap[0] == &si.identityFieldMap[0]
+}
+
+func fieldByInfo(rv reflect.Value, fi fieldInfo) reflect.Value {
+	if fi.direct >= 0 {
+		return rv.Field(fi.direct)
+	}
+	return rv.FieldByIndex(fi.index)
 }
 
 // ---------------------------------------------------------------------------
@@ -320,6 +434,9 @@ func (d *decoder) unmarshalTop(v any) error {
 // ---------------------------------------------------------------------------
 
 func (d *decoder) unmarshalTuple(rv reflect.Value, si *structInfo, fieldMap []int) error {
+	if isIdentityFieldMap(si, fieldMap) {
+		return d.unmarshalTupleExact(rv, si)
+	}
 	d.skipWhitespaceAndComments()
 	if d.pos >= len(d.data) || d.data[d.pos] != '(' {
 		return d.errorf("expected '('")
@@ -357,13 +474,71 @@ func (d *decoder) unmarshalTuple(rv reflect.Value, si *structInfo, fieldMap []in
 			continue
 		}
 
-		fv := rv.FieldByIndex(si.fields[fi].index)
+		fv := fieldByInfo(rv, si.fields[fi])
 		if err := d.unmarshalValue(fv); err != nil {
 			return err
 		}
 	}
 
 	// Skip any remaining values (source struct may have more fields than target)
+	d.skipWhitespaceAndComments()
+	for d.pos < len(d.data) && d.data[d.pos] != ')' {
+		if d.data[d.pos] == ',' {
+			d.pos++
+			d.skipWhitespaceAndComments()
+			if d.pos < len(d.data) && d.data[d.pos] == ')' {
+				break
+			}
+		}
+		if d.pos < len(d.data) && d.data[d.pos] != ')' {
+			if err := d.skipValue(); err != nil {
+				return err
+			}
+			d.skipWhitespaceAndComments()
+		}
+	}
+
+	if d.pos < len(d.data) && d.data[d.pos] == ')' {
+		d.pos++
+	}
+	return nil
+}
+
+func (d *decoder) unmarshalTupleExact(rv reflect.Value, si *structInfo) error {
+	d.skipWhitespaceAndComments()
+	if d.pos >= len(d.data) || d.data[d.pos] != '(' {
+		return d.errorf("expected '('")
+	}
+	d.pos++
+
+	for i := 0; i < len(si.fields); i++ {
+		d.skipWhitespaceAndComments()
+		if d.pos >= len(d.data) {
+			return d.errorf("unexpected EOF in tuple")
+		}
+		if d.data[d.pos] == ')' {
+			break
+		}
+		if i > 0 {
+			if d.data[d.pos] == ',' {
+				d.pos++
+				d.skipWhitespaceAndComments()
+				if d.pos < len(d.data) && d.data[d.pos] == ')' {
+					break
+				}
+			} else if d.data[d.pos] == ')' {
+				break
+			} else {
+				return d.errorf("expected ',' or ')'")
+			}
+		}
+
+		fv := fieldByInfo(rv, si.fields[i])
+		if err := d.unmarshalValue(fv); err != nil {
+			return err
+		}
+	}
+
 	d.skipWhitespaceAndComments()
 	for d.pos < len(d.data) && d.data[d.pos] != ')' {
 		if d.data[d.pos] == ',' {
@@ -487,13 +662,22 @@ func (d *decoder) atValueEnd() bool {
 
 func (d *decoder) parseBool() (bool, error) {
 	d.skipWhitespaceAndComments()
-	if d.pos+4 <= len(d.data) && string(d.data[d.pos:d.pos+4]) == "true" {
+	if d.pos+4 <= len(d.data) &&
+		d.data[d.pos] == 't' &&
+		d.data[d.pos+1] == 'r' &&
+		d.data[d.pos+2] == 'u' &&
+		d.data[d.pos+3] == 'e' {
 		if d.pos+4 >= len(d.data) || isDelim(d.data[d.pos+4]) {
 			d.pos += 4
 			return true, nil
 		}
 	}
-	if d.pos+5 <= len(d.data) && string(d.data[d.pos:d.pos+5]) == "false" {
+	if d.pos+5 <= len(d.data) &&
+		d.data[d.pos] == 'f' &&
+		d.data[d.pos+1] == 'a' &&
+		d.data[d.pos+2] == 'l' &&
+		d.data[d.pos+3] == 's' &&
+		d.data[d.pos+4] == 'e' {
 		if d.pos+5 >= len(d.data) || isDelim(d.data[d.pos+5]) {
 			d.pos += 5
 			return false, nil
@@ -1059,12 +1243,7 @@ func (d *decoder) unmarshalNestedStruct(fv reflect.Value) error {
 	// Positional tuple: (val1,val2,...)
 	if d.data[d.pos] == '(' {
 		si := getStructInfo(fv.Type())
-		// Build identity fieldMap
-		fieldMap := make([]int, len(si.fields))
-		for i := range fieldMap {
-			fieldMap[i] = i
-		}
-		return d.unmarshalTuple(fv, si, fieldMap)
+		return d.unmarshalTuple(fv, si, si.identityFieldMap)
 	}
 
 	return d.errorf("expected '{' or '(' for struct")
@@ -1098,10 +1277,12 @@ func (d *decoder) skipValue() error {
 		return d.skipBalanced('(', ')')
 	case '[':
 		return d.skipBalanced('[', ']')
+	case '<':
+		return d.skipBalanced('<', '>')
 	default:
 		for d.pos < len(d.data) {
 			b := d.data[d.pos]
-			if b == ',' || b == ')' || b == ']' {
+			if b == ',' || b == ')' || b == ']' || b == '>' {
 				return nil
 			}
 			d.pos++

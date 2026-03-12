@@ -202,7 +202,7 @@ func stringNeedsQuoting(s string) bool {
 	if len(s) == 0 {
 		return true
 	}
-	b := []byte(s)
+	b := unsafe.Slice(unsafe.StringData(s), len(s))
 	if b[0] == ' ' || b[len(b)-1] == ' ' {
 		return true
 	}
@@ -230,7 +230,7 @@ func stringNeedsQuoting(s string) bool {
 
 func appendEscaped(buf []byte, s string) []byte {
 	buf = append(buf, '"')
-	b := []byte(s)
+	b := unsafe.Slice(unsafe.StringData(s), len(s))
 	start := 0
 	for i := 0; i < len(b); i++ {
 		esc := escapeChar[b[i]]
@@ -259,14 +259,21 @@ func appendStr(buf []byte, s string) []byte {
 type fieldInfo struct {
 	name      string
 	index     []int
+	direct    int
 	tagged    bool
 	fieldType reflect.Type // resolved field type (for schema generation)
 }
 
 type structInfo struct {
-	fields     []fieldInfo
-	structType reflect.Type   // the struct type these fields belong to
-	nameIndex  map[string]int // field name → index in fields slice
+	fields             []fieldInfo
+	structType         reflect.Type   // the struct type these fields belong to
+	nameIndex          map[string]int // field name → index in fields slice
+	identityFieldMap   []int
+	headerOnce         sync.Once
+	headerUntyped      []byte
+	headerTyped        []byte
+	sliceHeaderUntyped []byte
+	sliceHeaderTyped   []byte
 }
 
 var structCache sync.Map // map[reflect.Type]*structInfo
@@ -288,7 +295,11 @@ func buildStructInfo(t reflect.Type) *structInfo {
 		if !f.IsExported() {
 			continue
 		}
-		fi := fieldInfo{index: f.Index, fieldType: f.Type}
+		direct := -1
+		if len(f.Index) == 1 {
+			direct = f.Index[0]
+		}
+		fi := fieldInfo{index: f.Index, direct: direct, fieldType: f.Type}
 
 		// Check ason tag first, then json tag
 		if tag, ok := f.Tag.Lookup("ason"); ok {
@@ -329,6 +340,7 @@ func buildStructInfo(t reflect.Type) *structInfo {
 			for _, ef := range embedded.fields {
 				ef2 := ef
 				ef2.index = append(append([]int{}, f.Index...), ef.index...)
+				ef2.direct = -1
 				fields = append(fields, ef2)
 			}
 			continue
@@ -338,8 +350,10 @@ func buildStructInfo(t reflect.Type) *structInfo {
 	}
 	si := &structInfo{fields: fields, structType: t}
 	si.nameIndex = make(map[string]int, len(fields))
+	si.identityFieldMap = make([]int, len(fields))
 	for i, fi := range fields {
 		si.nameIndex[fi.name] = i
+		si.identityFieldMap[i] = i
 	}
 	return si
 }
@@ -369,6 +383,42 @@ func appendStructSchema(buf []byte, si *structInfo, typed bool) []byte {
 	}
 	buf = append(buf, '}')
 	return buf
+}
+
+func (si *structInfo) initHeaders() {
+	si.headerOnce.Do(func() {
+		si.headerUntyped = appendStructSchema(make([]byte, 0, 64), si, false)
+		si.headerUntyped = append(si.headerUntyped, ':')
+
+		si.headerTyped = appendStructSchema(make([]byte, 0, 96), si, true)
+		si.headerTyped = append(si.headerTyped, ':')
+
+		si.sliceHeaderUntyped = make([]byte, 0, len(si.headerUntyped)+2)
+		si.sliceHeaderUntyped = append(si.sliceHeaderUntyped, '[')
+		si.sliceHeaderUntyped = append(si.sliceHeaderUntyped, si.headerUntyped[:len(si.headerUntyped)-1]...)
+		si.sliceHeaderUntyped = append(si.sliceHeaderUntyped, ']', ':')
+
+		si.sliceHeaderTyped = make([]byte, 0, len(si.headerTyped)+2)
+		si.sliceHeaderTyped = append(si.sliceHeaderTyped, '[')
+		si.sliceHeaderTyped = append(si.sliceHeaderTyped, si.headerTyped[:len(si.headerTyped)-1]...)
+		si.sliceHeaderTyped = append(si.sliceHeaderTyped, ']', ':')
+	})
+}
+
+func (si *structInfo) structHeader(typed bool) []byte {
+	si.initHeaders()
+	if typed {
+		return si.headerTyped
+	}
+	return si.headerUntyped
+}
+
+func (si *structInfo) sliceHeader(typed bool) []byte {
+	si.initHeaders()
+	if typed {
+		return si.sliceHeaderTyped
+	}
+	return si.sliceHeaderUntyped
 }
 
 // appendFieldSchema writes a field's name and optional schema/type annotation.
@@ -508,26 +558,8 @@ func encodeInner(v any, typed bool) ([]byte, error) {
 	buf := *bp
 
 	si := getStructInfo(rv.Type())
-
-	// Serialize data first into a temp region
-	dataBuf := make([]byte, 0, 128)
-	dataBuf = append(dataBuf, '(')
-
-	for i, fi := range si.fields {
-		if i > 0 {
-			dataBuf = append(dataBuf, ',')
-		}
-		fv := rv.FieldByIndex(fi.index)
-		dataBuf, _ = marshalFieldValue(dataBuf, fv, false)
-	}
-	dataBuf = append(dataBuf, ')')
-
-	// Build schema header (recursive — includes nested struct schemas)
-	buf = appendStructSchema(buf, si, typed)
-	buf = append(buf, ':')
-
-	// Append data
-	buf = append(buf, dataBuf...)
+	buf = append(buf, si.structHeader(typed)...)
+	buf = marshalStruct(buf, rv, si, true)
 
 	result := make([]byte, len(buf))
 	copy(result, buf)
@@ -559,10 +591,7 @@ func encodeSliceInner(v any, typed bool) ([]byte, error) {
 	bp := getBuf()
 	buf := *bp
 
-	// Schema header (recursive — includes nested struct schemas)
-	buf = append(buf, '[')
-	buf = appendStructSchema(buf, si, typed)
-	buf = append(buf, ']', ':')
+	buf = append(buf, si.sliceHeader(typed)...)
 
 	// Data rows
 	for i := 0; i < rv.Len(); i++ {

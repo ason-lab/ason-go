@@ -60,7 +60,7 @@ func TestDeserializeStructWithSchema(t *testing.T) {
 }
 
 func TestDeserializeStructWithTypedSchema(t *testing.T) {
-	input := "{id:int,name:str,active:bool}:(1,Alice,true)"
+	input := "{id@int,name@str,active@bool}:(1,Alice,true)"
 	var u User
 	if err := Decode([]byte(input), &u); err != nil {
 		t.Fatal(err)
@@ -86,7 +86,7 @@ func TestRoundtrip(t *testing.T) {
 }
 
 func TestVecDeserialize(t *testing.T) {
-	input := "[{id:int,name:str,active:bool}]:(1,Alice,true),(2,Bob,false)"
+	input := "[{id,name,active}]:(1,Alice,true),(2,Bob,false)"
 	var users []User
 	if err := Decode([]byte(input), &users); err != nil {
 		t.Fatal(err)
@@ -100,7 +100,7 @@ func TestVecDeserialize(t *testing.T) {
 }
 
 func TestMultiline(t *testing.T) {
-	input := "[{id:int,name:str,active:bool}]:\n  (1, Alice, true),\n  (2, Bob, false)"
+	input := "[{id,name,active}]:\n  (1, Alice, true),\n  (2, Bob, false)"
 	var users []User
 	if err := Decode([]byte(input), &users); err != nil {
 		t.Fatal(err)
@@ -151,7 +151,7 @@ func TestNestedStruct(t *testing.T) {
 		Name string `ason:"name"`
 		Dept Dept   `ason:"dept"`
 	}
-	input := "{name,dept:{title}}:(Alice,(Manager))"
+	input := "{name,dept@{title}}:(Alice,(Manager))"
 	var e Employee
 	if err := Decode([]byte(input), &e); err != nil {
 		t.Fatal(err)
@@ -189,7 +189,7 @@ func TestEscapeRoundtrip(t *testing.T) {
 }
 
 func TestTrailingComma(t *testing.T) {
-	input := "[{id:int,name:str,active:bool}]:(1,Alice,true),(2,Bob,false),"
+	input := "[{id,name,active}]:(1,Alice,true),(2,Bob,false),"
 	var users []User
 	if err := Decode([]byte(input), &users); err != nil {
 		t.Fatal(err)
@@ -221,23 +221,27 @@ func TestFloatField(t *testing.T) {
 	}
 }
 
-func TestMapField(t *testing.T) {
-	type MapItem struct {
-		Name  string           `ason:"name"`
-		Attrs map[string]int64 `ason:"attrs"`
+func TestEntryListField(t *testing.T) {
+	type AttrEntry struct {
+		Key   string `ason:"key"`
+		Value int64  `ason:"value"`
 	}
-	input := "{name,attrs}:(Alice,<age:30,score:95>)"
-	var item MapItem
+	type EntryItem struct {
+		Name  string      `ason:"name"`
+		Attrs []AttrEntry `ason:"attrs"`
+	}
+	input := "{name,attrs@[{key,value}]}:(Alice,[(age,30),(score,95)])"
+	var item EntryItem
 	if err := Decode([]byte(input), &item); err != nil {
 		t.Fatal(err)
 	}
-	if item.Attrs["age"] != 30 || item.Attrs["score"] != 95 {
+	if len(item.Attrs) != 2 || item.Attrs[0].Key != "age" || item.Attrs[0].Value != 30 || item.Attrs[1].Key != "score" || item.Attrs[1].Value != 95 {
 		t.Fatalf("unexpected: %+v", item.Attrs)
 	}
 }
 
 func TestAnnotatedSimpleStruct(t *testing.T) {
-	typed := "{id:int,name:str,active:bool}:(42,Bob,false)"
+	typed := "{id@int,name@str,active@bool}:(42,Bob,false)"
 	untyped := "{id,name,active}:(42,Bob,false)"
 	var u1, u2 User
 	if err := Decode([]byte(typed), &u1); err != nil {
@@ -255,7 +259,7 @@ func TestAnnotatedSimpleStruct(t *testing.T) {
 }
 
 func TestAnnotatedVec(t *testing.T) {
-	typed := "[{id:int,name:str,active:bool}]:(1,Alice,true),(2,Bob,false)"
+	typed := "[{id@int,name@str,active@bool}]:(1,Alice,true),(2,Bob,false)"
 	untyped := "[{id,name,active}]:(1,Alice,true),(2,Bob,false)"
 	var v1, v2 []User
 	if err := Decode([]byte(typed), &v1); err != nil {
@@ -280,8 +284,8 @@ func TestAnnotatedNestedStruct(t *testing.T) {
 		Dept   Dept   `ason:"dept"`
 		Active bool   `ason:"active"`
 	}
-	typed := "{name:str,age:int,dept:{title:str,budget:float},active:bool}:(Alice,30,(Engineering,50000.5),true)"
-	untyped := "{name,age,dept:{title,budget},active}:(Alice,30,(Engineering,50000.5),true)"
+	typed := "{name@str,age@int,dept@{title@str,budget@float},active@bool}:(Alice,30,(Engineering,50000.5),true)"
+	untyped := "{name,age,dept@{title,budget},active}:(Alice,30,(Engineering,50000.5),true)"
 	var e1, e2 Employee
 	if err := Decode([]byte(typed), &e1); err != nil {
 		t.Fatal(err)
@@ -303,7 +307,7 @@ func TestAnnotatedWithArrays(t *testing.T) {
 		Scores []int64  `ason:"scores"`
 		Tags   []string `ason:"tags"`
 	}
-	typed := "{name:str,scores:[int],tags:[str]}:(Alice,[90,85,92],[rust,go])"
+	typed := "{name@str,scores@[int],tags@[str]}:(Alice,[90,85,92],[rust,go])"
 	untyped := "{name,scores,tags}:(Alice,[90,85,92],[rust,go])"
 	var p1, p2 Profile
 	if err := Decode([]byte(typed), &p1); err != nil {
@@ -320,13 +324,17 @@ func TestAnnotatedWithArrays(t *testing.T) {
 	}
 }
 
-func TestAnnotatedWithMap(t *testing.T) {
-	type Config struct {
-		Name  string           `ason:"name"`
-		Attrs map[string]int64 `ason:"attrs"`
+func TestAnnotatedWithEntryList(t *testing.T) {
+	type AttrEntry struct {
+		Key   string `ason:"key"`
+		Value int64  `ason:"value"`
 	}
-	typed := "{name:str,attrs:<str:int>}:(server,<port:8080,timeout:30>)"
-	untyped := "{name,attrs}:(server,<port:8080,timeout:30>)"
+	type Config struct {
+		Name  string      `ason:"name"`
+		Attrs []AttrEntry `ason:"attrs"`
+	}
+	typed := "{name@str,attrs@[{key@str,value@int}]}:(server,[(port,8080),(timeout,30)])"
+	untyped := "{name,attrs@[{key,value}]}:(server,[(port,8080),(timeout,30)])"
 	var c1, c2 Config
 	if err := Decode([]byte(typed), &c1); err != nil {
 		t.Fatal(err)
@@ -337,28 +345,27 @@ func TestAnnotatedWithMap(t *testing.T) {
 	if !reflect.DeepEqual(c1, c2) {
 		t.Fatalf("mismatch")
 	}
-	if c1.Attrs["port"] != 8080 {
-		t.Fatalf("unexpected port")
+	if len(c1.Attrs) != 2 || c1.Attrs[0].Key != "port" || c1.Attrs[0].Value != 8080 {
+		t.Fatalf("unexpected attrs: %+v", c1.Attrs)
 	}
 }
 
-func TestComplexMapRoundtrip(t *testing.T) {
+func TestComplexEntryListRoundtrip(t *testing.T) {
 	type Person struct {
 		Name string `ason:"name"`
 		Age  int64  `ason:"age"`
 	}
+	type GroupEntry struct {
+		Key   string   `ason:"key"`
+		Value []Person `ason:"value"`
+	}
 	type Groups struct {
-		Groups map[string][]Person `ason:"groups"`
+		Groups []GroupEntry `ason:"groups"`
 	}
 	src := Groups{
-		Groups: map[string][]Person{
-			"teamA": {
-				{Name: "Alice", Age: 30},
-				{Name: "Bob", Age: 28},
-			},
-			"teamB": {
-				{Name: "Carol", Age: 41},
-			},
+		Groups: []GroupEntry{
+			{Key: "teamA", Value: []Person{{Name: "Alice", Age: 30}, {Name: "Bob", Age: 28}}},
+			{Key: "teamB", Value: []Person{{Name: "Carol", Age: 41}}},
 		},
 	}
 	data, err := Encode(&src)
@@ -374,16 +381,20 @@ func TestComplexMapRoundtrip(t *testing.T) {
 	}
 }
 
-func TestAnnotatedWithComplexMap(t *testing.T) {
+func TestAnnotatedWithComplexEntryList(t *testing.T) {
 	type Person struct {
 		Name string `ason:"name"`
 		Age  int64  `ason:"age"`
 	}
-	type Groups struct {
-		Groups map[string][]Person `ason:"groups"`
+	type GroupEntry struct {
+		Key   string   `ason:"key"`
+		Value []Person `ason:"value"`
 	}
-	typed := "{groups:<str:[{name:str,age:int}]>}:(<teamA:[(Alice,30),(Bob,28)],teamB:[(Carol,41)]>)"
-	untyped := "{groups}:(<teamA:[(Alice,30),(Bob,28)],teamB:[(Carol,41)]>)"
+	type Groups struct {
+		Groups []GroupEntry `ason:"groups"`
+	}
+	typed := "{groups@[{key@str,value@[{name@str,age@int}]}]}:([(teamA,[(Alice,30),(Bob,28)]),(teamB,[(Carol,41)])])"
+	untyped := "{groups@[{key,value@[{name,age}]}]}:([(teamA,[(Alice,30),(Bob,28)]),(teamB,[(Carol,41)])])"
 	var g1, g2 Groups
 	if err := Decode([]byte(typed), &g1); err != nil {
 		t.Fatal(err)
@@ -394,30 +405,99 @@ func TestAnnotatedWithComplexMap(t *testing.T) {
 	if !reflect.DeepEqual(g1, g2) {
 		t.Fatalf("mismatch: %#v vs %#v", g1, g2)
 	}
-	if len(g1.Groups["teamA"]) != 2 || g1.Groups["teamA"][0].Name != "Alice" || g1.Groups["teamB"][0].Age != 41 {
+	if len(g1.Groups) != 2 || g1.Groups[0].Key != "teamA" || len(g1.Groups[0].Value) != 2 || g1.Groups[1].Value[0].Age != 41 {
 		t.Fatalf("unexpected: %#v", g1)
 	}
 }
 
-func TestEncodeTypedComplexMapSchema(t *testing.T) {
+func TestEncodeTypedComplexEntryListSchema(t *testing.T) {
 	type Person struct {
 		Name string `ason:"name"`
 		Age  int64  `ason:"age"`
 	}
+	type GroupEntry struct {
+		Key   string   `ason:"key"`
+		Value []Person `ason:"value"`
+	}
 	type Groups struct {
-		Groups map[string][]Person `ason:"groups"`
+		Groups []GroupEntry `ason:"groups"`
 	}
 	src := Groups{
-		Groups: map[string][]Person{
-			"teamA": {{Name: "Alice", Age: 30}},
+		Groups: []GroupEntry{
+			{Key: "teamA", Value: []Person{{Name: "Alice", Age: 30}}},
 		},
 	}
 	data, err := EncodeTyped(&src)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(data, []byte("groups:<str:[{name:str,age:int}]>")) {
-		t.Fatalf("missing complex map schema: %s", data)
+	if !bytes.Contains(data, []byte("groups@[{key@str,value@[{name@str,age@int}]}]")) {
+		t.Fatalf("missing complex entry-list schema: %s", data)
+	}
+}
+
+func TestPrettyTypedComplexEntryListRoundtrip(t *testing.T) {
+	type Person struct {
+		Name string `ason:"name"`
+		Age  int64  `ason:"age"`
+	}
+	type GroupEntry struct {
+		Key   string   `ason:"key"`
+		Value []Person `ason:"value"`
+	}
+	type Groups struct {
+		Groups []GroupEntry `ason:"groups"`
+	}
+	src := Groups{
+		Groups: []GroupEntry{
+			{Key: "teamA", Value: []Person{{Name: "Alice", Age: 30}, {Name: "Bob", Age: 28}}},
+			{Key: "teamB", Value: []Person{{Name: "Carol", Age: 41}}},
+		},
+	}
+	data, err := EncodePrettyTyped(&src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte("groups@[{")) {
+		t.Fatalf("missing complex entry-list typed schema: %s", data)
+	}
+	var out Groups
+	if err := Decode(data, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(src, out) {
+		t.Fatalf("mismatch: %#v vs %#v", src, out)
+	}
+}
+
+func TestBinaryComplexEntryListRoundtrip(t *testing.T) {
+	type Person struct {
+		Name string `ason:"name"`
+		Age  int64  `ason:"age"`
+	}
+	type GroupEntry struct {
+		Key   string   `ason:"key"`
+		Value []Person `ason:"value"`
+	}
+	type Groups struct {
+		Groups []GroupEntry `ason:"groups"`
+	}
+	src := Groups{
+		Groups: []GroupEntry{
+			{Key: "teamA", Value: []Person{{Name: "Alice", Age: 30}, {Name: "Bob", Age: 28}}},
+			{Key: "teamB", Value: []Person{{Name: "Carol", Age: 41}}},
+		},
+	}
+	data, err := EncodeBinary(&src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out Groups
+	if err := DecodeBinary(data, &out); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(src, out) {
+		t.Fatalf("mismatch: %#v vs %#v", src, out)
 	}
 }
 
@@ -427,7 +507,7 @@ func TestAnnotatedWithOptional(t *testing.T) {
 		Label *string  `ason:"label"`
 		Score *float64 `ason:"score"`
 	}
-	typed := "{id:int,label:str,score:float}:(1,hello,95.5)"
+	typed := "{id@int,label@str,score@float}:(1,hello,95.5)"
 	untyped := "{id,label,score}:(1,hello,95.5)"
 	var r1, r2 Record
 	if err := Decode([]byte(typed), &r1); err != nil {
@@ -439,7 +519,7 @@ func TestAnnotatedWithOptional(t *testing.T) {
 	if *r1.Label != *r2.Label || *r1.Score != *r2.Score {
 		t.Fatalf("mismatch")
 	}
-	typedNone := "{id:int,label:str,score:float}:(2,,)"
+	typedNone := "{id@int,label@str,score@float}:(2,,)"
 	untypedNone := "{id,label,score}:(2,,)"
 	var r3, r4 Record
 	if err := Decode([]byte(typedNone), &r3); err != nil {
@@ -471,8 +551,8 @@ func TestAnnotatedDeepNesting(t *testing.T) {
 		Revenue float64 `ason:"revenue"`
 		Team    Team    `ason:"team"`
 	}
-	typed := "{name:str,revenue:float,team:{lead:str,projects:[{name:str,tasks:[{title:str,done:bool}]}]}}:(Acme,500.5,(Alice,[(API,[(Design,true),(Code,false)])]))"
-	untyped := "{name,revenue,team:{lead,projects:[{name,tasks:[{title,done}]}]}}:(Acme,500.5,(Alice,[(API,[(Design,true),(Code,false)])]))"
+	typed := "{name@str,revenue@float,team@{lead@str,projects@[{name@str,tasks@[{title@str,done@bool}]}]}}:(Acme,500.5,(Alice,[(API,[(Design,true),(Code,false)])]))"
+	untyped := "{name,revenue,team@{lead,projects@[{name,tasks@[{title,done}]}]}}:(Acme,500.5,(Alice,[(API,[(Design,true),(Code,false)])]))"
 	var c1, c2 Company
 	if err := Decode([]byte(typed), &c1); err != nil {
 		t.Fatal(err)
@@ -501,8 +581,8 @@ func TestAnnotatedMixedPartial(t *testing.T) {
 		Score  float64 `ason:"score"`
 		Active bool    `ason:"active"`
 	}
-	partial := "{id:int,name,score:float,active}:(1,Alice,95.5,true)"
-	full := "{id:int,name:str,score:float,active:bool}:(1,Alice,95.5,true)"
+	partial := "{id@int,name,score@float,active}:(1,Alice,95.5,true)"
+	full := "{id@int,name@str,score@float,active@bool}:(1,Alice,95.5,true)"
 	none := "{id,name,score,active}:(1,Alice,95.5,true)"
 	var m1, m2, m3 Mixed
 	if err := Decode([]byte(partial), &m1); err != nil {
@@ -537,7 +617,7 @@ func TestEncodeTypedSimple(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expect := "{id:int,name:str,active:bool}:(1,Alice,true)"
+	expect := "{id@int,name@str,active@bool}:(1,Alice,true)"
 	if string(got) != expect {
 		t.Fatalf("got %q, want %q", got, expect)
 	}
@@ -569,7 +649,7 @@ func TestEncodeTypedFloats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expect := "{id:int,value:float,label:str}:(1,95.5,good)"
+	expect := "{id@int,value@float,label@str}:(1,95.5,good)"
 	if string(got) != expect {
 		t.Fatalf("got %q, want %q", got, expect)
 	}
@@ -588,7 +668,7 @@ func TestEncodeTypedAllPrimitives(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expect := "{b:bool,i:int,u:int,f:float,s:str}:(true,-42,100,3.14,hello)"
+	expect := "{b@bool,i@int,u@int,f@float,s@str}:(true,-42,100,3.14,hello)"
 	if string(got) != expect {
 		t.Fatalf("got %q, want %q", got, expect)
 	}
@@ -607,7 +687,7 @@ func TestEncodeTypedOptional(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(out1) != "{id:int,label:str,score:float}:(1,hello,95.5)" {
+	if string(out1) != "{id@int,label@str,score@float}:(1,hello,95.5)" {
 		t.Fatalf("got %q", out1)
 	}
 	v2 := Opt{ID: 2, Label: nil, Score: nil}
@@ -615,7 +695,7 @@ func TestEncodeTypedOptional(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(out2) != "{id:int,label:str,score:float}:(2,,)" {
+	if string(out2) != "{id@int,label@str,score@float}:(2,,)" {
 		t.Fatalf("got %q", out2)
 	}
 }
@@ -634,7 +714,7 @@ func TestEncodeTypedNestedStruct(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expect := "{name:str,dept:{title:str},active:bool}:(Alice,(Engineering),true)"
+	expect := "{name@str,dept@{title@str},active@bool}:(Alice,(Engineering),true)"
 	if string(got) != expect {
 		t.Fatalf("got %q, want %q", got, expect)
 	}
@@ -661,7 +741,7 @@ func TestEncodeTypedVec(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if string(typed) != "[{id:int,name:str,score:float}]:(1,Alice,95.5),(2,Bob,87.0)" {
+	if string(typed) != "[{id@int,name@str,score@float}]:(1,Alice,95.5),(2,Bob,87.0)" {
 		t.Fatalf("got %q", typed)
 	}
 	var r1, r2 []RowT
@@ -775,7 +855,7 @@ func TestPrettyFormatTyped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := "{name:str, age:int}:(Alice, 30)"
+	expected := "{name@str, age@int}:(Alice, 30)"
 	if string(p) != expected {
 		t.Fatalf("expected %q, got %q", expected, string(p))
 	}
@@ -797,8 +877,8 @@ func contains(s, sub string) bool {
 // Format validation: {schema}: must be rejected for slices; [{schema}]: required
 // ============================================================================
 
-const badFmt = "{id:int,name:str}:\n  (1,Alice),\n  (2,Bob),\n  (3,Carol)"
-const goodFmt = "[{id:int,name:str}]:\n  (1,Alice),\n  (2,Bob),\n  (3,Carol)"
+const badFmt = "{id,name}:\n  (1,Alice),\n  (2,Bob),\n  (3,Carol)"
+const goodFmt = "[{id,name}]:\n  (1,Alice),\n  (2,Bob),\n  (3,Carol)"
 
 func TestBadFormatAsSlice(t *testing.T) {
 	var rows []Row
@@ -834,9 +914,9 @@ func TestGoodFormatAsSlice(t *testing.T) {
 }
 
 func TestGoodFormatSingleStruct(t *testing.T) {
-	// {id:int,name:str}: (1, Alice) — single struct, one tuple: MUST succeed
+	// {id,name}: (1, Alice) — single struct, one tuple: MUST succeed
 	var r Row
-	if err := Decode([]byte("{id:int,name:str}:(1,Alice)"), &r); err != nil {
+	if err := Decode([]byte("{id,name}:(1,Alice)"), &r); err != nil {
 		t.Fatalf("should accept single struct with one tuple: %v", err)
 	}
 	if r.ID != 1 || r.Name != "Alice" {
@@ -845,9 +925,9 @@ func TestGoodFormatSingleStruct(t *testing.T) {
 }
 
 func TestGoodFormatVecSingleItem(t *testing.T) {
-	// [{id:int,name:str}]: (1, Alice) — array schema, one tuple: MUST succeed
+	// [{id,name}]: (1, Alice) — array schema, one tuple: MUST succeed
 	var rows []Row
-	if err := Decode([]byte("[{id:int,name:str}]:(1,Alice)"), &rows); err != nil {
+	if err := Decode([]byte("[{id,name}]:(1,Alice)"), &rows); err != nil {
 		t.Fatalf("should accept [{schema}]: with single tuple: %v", err)
 	}
 	if len(rows) != 1 {
@@ -861,7 +941,7 @@ func TestGoodFormatVecSingleItem(t *testing.T) {
 func TestBadFormatExtraTuples(t *testing.T) {
 	// Two tuples without vec wrapper
 	var r Row
-	err := Decode([]byte("{id:int,name:str}:(10,Dave),(11,Eve)"), &r)
+	err := Decode([]byte("{id,name}:(10,Dave),(11,Eve)"), &r)
 	if err == nil {
 		t.Fatalf("should reject trailing tuple, got %+v", r)
 	}
@@ -901,7 +981,7 @@ func TestPrettyRoundtripTyped(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !contains(string(p), ":int") && !contains(string(p), ":str") {
+	if !contains(string(p), "@str") || !contains(string(p), "@int") {
 		t.Fatalf("expected typed annotations in %q", string(p))
 	}
 	var u2 User
@@ -1033,8 +1113,8 @@ func TestEncodeTypedBoolSliceField(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(out)
-	if !contains(s, "flags:[bool]") {
-		t.Fatalf("expected flags:[bool], got %s", s)
+	if !contains(s, "flags@[bool]") {
+		t.Fatalf("expected flags@[bool], got %s", s)
 	}
 	var decoded WithBoolSlice
 	if err := Decode(out, &decoded); err != nil {
@@ -1052,8 +1132,8 @@ func TestEncodeTypedIntSliceField(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(out)
-	if !contains(s, "nums:[int]") {
-		t.Fatalf("expected nums:[int], got %s", s)
+	if !contains(s, "nums@[int]") {
+		t.Fatalf("expected nums@[int], got %s", s)
 	}
 	var decoded WithIntSlice
 	if err := Decode(out, &decoded); err != nil {
@@ -1071,8 +1151,8 @@ func TestEncodeTypedStrSliceField(t *testing.T) {
 		t.Fatal(err)
 	}
 	s := string(out)
-	if !contains(s, "tags:[str]") {
-		t.Fatalf("expected tags:[str], got %s", s)
+	if !contains(s, "tags@[str]") {
+		t.Fatalf("expected tags@[str], got %s", s)
 	}
 }
 
@@ -1084,8 +1164,8 @@ func TestEncodeTypedEmptyBoolSlice(t *testing.T) {
 	}
 	s := string(out)
 	// Empty bool slice should still have type annotation from reflection
-	if !contains(s, "flags:[bool]") {
-		t.Fatalf("expected flags:[bool] for empty slice, got %s", s)
+	if !contains(s, "flags@[bool]") {
+		t.Fatalf("expected flags@[bool] for empty slice, got %s", s)
 	}
 }
 
@@ -1110,7 +1190,7 @@ type PlusMinusFields struct {
 }
 
 func TestDecodeFieldNamesWithPlusMinus(t *testing.T) {
-	input := []byte("{lowPriorityEIR+CIR:str,a-b:str,name:str}:(42,hello,Alice)")
+	input := []byte("{lowPriorityEIR+CIR,a-b,name}:(42,hello,Alice)")
 	var v PlusMinusFields
 	if err := Decode(input, &v); err != nil {
 		t.Fatal(err)

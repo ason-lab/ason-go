@@ -88,7 +88,11 @@ func (d *decoder) decodeSliceTop(v any) error {
 	fieldMap := buildFieldMapCached(si, fields, schemaKey)
 	if sliceVal.Type().Elem().Kind() == reflect.Struct {
 		if rowCount := countTopLevelTupleRows(d.data, d.pos); rowCount > 0 {
-			sliceVal = reflect.MakeSlice(sliceVal.Type(), rowCount, rowCount)
+			if sliceVal.Cap() < rowCount {
+				sliceVal = reflect.MakeSlice(sliceVal.Type(), rowCount, rowCount)
+			} else {
+				sliceVal = sliceVal.Slice(0, rowCount)
+			}
 			exact := isIdentityFieldMap(si, fieldMap)
 			decoded := 0
 			for decoded < rowCount {
@@ -165,7 +169,7 @@ func countTopLevelEntries(data []byte, start int, open, close byte) int {
 	if start >= len(data) || data[start] != open {
 		return 0
 	}
-	depthParen, depthBracket, depthAngle := 0, 0, 0
+	depthParen, depthBracket := 0, 0
 	inString := false
 	count := 0
 	hasValue := false
@@ -217,20 +221,8 @@ func countTopLevelEntries(data []byte, start int, open, close byte) int {
 				}
 				return count
 			}
-		case '<':
-			depthAngle++
-			hasValue = true
-		case '>':
-			if depthAngle > 0 {
-				depthAngle--
-			} else if close == '>' {
-				if hasValue {
-					count++
-				}
-				return count
-			}
 		case ',':
-			if depthParen == 0 && depthBracket == 0 && depthAngle == 0 {
+			if depthParen == 0 && depthBracket == 0 {
 				if hasValue {
 					count++
 					hasValue = false
@@ -239,7 +231,7 @@ func countTopLevelEntries(data []byte, start int, open, close byte) int {
 				hasValue = true
 			}
 		default:
-			if b == close && depthParen == 0 && depthBracket == 0 && depthAngle == 0 {
+			if b == close && depthParen == 0 && depthBracket == 0 {
 				if hasValue {
 					count++
 				}
@@ -256,7 +248,7 @@ func countTopLevelEntries(data []byte, start int, open, close byte) int {
 }
 
 func countTopLevelTupleRows(data []byte, start int) int {
-	depthBracket, depthAngle := 0, 0
+	depthBracket := 0
 	inString := false
 	count := 0
 	for i := start; i < len(data); i++ {
@@ -292,14 +284,8 @@ func countTopLevelTupleRows(data []byte, start int) int {
 			if depthBracket > 0 {
 				depthBracket--
 			}
-		case '<':
-			depthAngle++
-		case '>':
-			if depthAngle > 0 {
-				depthAngle--
-			}
 		case '(':
-			if depthBracket == 0 && depthAngle == 0 {
+			if depthBracket == 0 {
 				count++
 			}
 		}
@@ -358,7 +344,7 @@ func (d *decoder) skipWhitespaceAndComments() {
 	}
 }
 
-// parseSchema parses {field1,field2,...} or {field1:type1,field2:type2,...}
+// parseSchema parses {field1,field2,...} or {field1@type,field2@{...},field3@[...],...}
 // Returns field names only (type annotations are skipped).
 func skipInlineWhitespace(data []byte, pos int) int {
 	for pos < len(data) && (data[pos] == ' ' || data[pos] == '\t') {
@@ -407,13 +393,16 @@ func scanSchemaEnd(data []byte, pos int) (int, error) {
 		}
 		for pos < len(data) {
 			b := data[pos]
-			if b == ',' || b == '}' || b == ':' || b == ' ' || b == '\t' {
+			if b == ',' || b == '}' || b == '@' || b == ':' || b == ' ' || b == '\t' {
 				break
 			}
 			pos++
 		}
 		pos = skipInlineWhitespace(data, pos)
 		if pos < len(data) && data[pos] == ':' {
+			return 0, &UnmarshalError{pos, "legacy ':' field annotations are not supported; use '@'"}
+		}
+		if pos < len(data) && data[pos] == '@' {
 			pos++
 			pos = skipInlineWhitespace(data, pos)
 			if pos >= len(data) {
@@ -428,12 +417,6 @@ func scanSchemaEnd(data []byte, pos int) (int, error) {
 				pos = end
 			case '[':
 				end, err := scanBalancedEnd(data, pos, '[', ']')
-				if err != nil {
-					return 0, err
-				}
-				pos = end
-			case '<':
-				end, err := scanBalancedEnd(data, pos, '<', '>')
 				if err != nil {
 					return 0, err
 				}
@@ -488,7 +471,7 @@ func (d *decoder) parseSchema() ([]string, string, error) {
 		start := d.pos
 		for d.pos < len(d.data) {
 			b := d.data[d.pos]
-			if b == ',' || b == '}' || b == ':' || b == ' ' || b == '\t' {
+			if b == ',' || b == '}' || b == '@' || b == ':' || b == ' ' || b == '\t' {
 				break
 			}
 			d.pos++
@@ -496,8 +479,12 @@ func (d *decoder) parseSchema() ([]string, string, error) {
 		name := unsafeString(d.data[start:d.pos])
 		d.skipWhitespace()
 
-		// Skip optional type annotation after ':'
 		if d.pos < len(d.data) && d.data[d.pos] == ':' {
+			return nil, "", d.errorf("legacy ':' field annotations are not supported; use '@'")
+		}
+
+		// Skip optional type annotation after '@'
+		if d.pos < len(d.data) && d.data[d.pos] == '@' {
 			d.pos++
 			d.skipWhitespace()
 			if d.pos < len(d.data) && d.data[d.pos] == '{' {
@@ -506,10 +493,6 @@ func (d *decoder) parseSchema() ([]string, string, error) {
 				}
 			} else if d.pos < len(d.data) && d.data[d.pos] == '[' {
 				if err := d.skipBalanced('[', ']'); err != nil {
-					return nil, "", err
-				}
-			} else if d.pos < len(d.data) && d.data[d.pos] == '<' {
-				if err := d.skipBalanced('<', '>'); err != nil {
 					return nil, "", err
 				}
 			} else {
@@ -850,7 +833,7 @@ func (d *decoder) unmarshalValue(fv reflect.Value) error {
 		return d.unmarshalSlice(fv)
 
 	case reflect.Map:
-		return d.unmarshalMap(fv)
+		return d.errorf("map fields are no longer supported; use a slice of entry structs")
 
 	case reflect.Struct:
 		return d.unmarshalNestedStruct(fv)
@@ -870,7 +853,7 @@ func (d *decoder) atValueEnd() bool {
 		return true
 	}
 	b := d.data[d.pos]
-	return b == ',' || b == ')' || b == ']' || b == '>' || b == ':'
+	return b == ',' || b == ')' || b == ']'
 }
 
 func (d *decoder) parseBool() (bool, error) {
@@ -900,7 +883,7 @@ func (d *decoder) parseBool() (bool, error) {
 }
 
 func isDelim(b byte) bool {
-	return b == ',' || b == ')' || b == ']' || b == '>' || b == ':' || b == ' ' || b == '\t' || b == '\n' || b == '\r'
+	return b == ',' || b == ')' || b == ']' || b == ' ' || b == '\t' || b == '\n' || b == '\r'
 }
 
 func (d *decoder) parseInt64() (int64, error) {
@@ -1034,7 +1017,7 @@ func (d *decoder) parsePlainValue() (string, error) {
 	hasEscape := false
 	for d.pos < len(d.data) {
 		b := d.data[d.pos]
-		if b == ',' || b == ')' || b == ']' || b == '>' || b == ':' {
+		if b == ',' || b == ')' || b == ']' {
 			break
 		}
 		if b == '\\' {
@@ -1336,7 +1319,12 @@ func (d *decoder) unmarshalSlice(fv reflect.Value) error {
 
 	elemType := fv.Type().Elem()
 	if elemCount > 0 {
-		slice := reflect.MakeSlice(fv.Type(), elemCount, elemCount)
+		var slice reflect.Value
+		if fv.Cap() < elemCount {
+			slice = reflect.MakeSlice(fv.Type(), elemCount, elemCount)
+		} else {
+			slice = fv.Slice(0, elemCount)
+		}
 		first := true
 		decoded := 0
 		for decoded < elemCount {
@@ -1381,7 +1369,12 @@ func (d *decoder) unmarshalSlice(fv reflect.Value) error {
 		return nil
 	}
 
-	slice := reflect.MakeSlice(fv.Type(), 0, 4)
+	var slice reflect.Value
+	if fv.Cap() > 0 {
+		slice = fv.Slice(0, 0)
+	} else {
+		slice = reflect.MakeSlice(fv.Type(), 0, 4)
+	}
 
 	first := true
 	for {
@@ -1419,61 +1412,6 @@ func (d *decoder) unmarshalSlice(fv reflect.Value) error {
 	}
 
 	fv.Set(slice)
-	return nil
-}
-
-func (d *decoder) unmarshalMap(fv reflect.Value) error {
-	d.skipWhitespaceAndComments()
-	if d.pos >= len(d.data) || d.data[d.pos] != '<' {
-		return d.errorf("expected '<'")
-	}
-	d.pos++
-
-	keyType := fv.Type().Key()
-	valType := fv.Type().Elem()
-	m := reflect.MakeMap(fv.Type())
-
-	first := true
-	for {
-		d.skipWhitespaceAndComments()
-		if d.pos >= len(d.data) || d.data[d.pos] == '>' {
-			d.pos++
-			break
-		}
-		if !first {
-			if d.data[d.pos] == ',' {
-				d.pos++
-				d.skipWhitespaceAndComments()
-				if d.pos < len(d.data) && d.data[d.pos] == '>' {
-					d.pos++
-					break
-				}
-			} else {
-				break
-			}
-		}
-		first = false
-
-		key := reflect.New(keyType).Elem()
-		if err := d.unmarshalValue(key); err != nil {
-			return err
-		}
-
-		d.skipWhitespaceAndComments()
-		if d.pos >= len(d.data) || d.data[d.pos] != ':' {
-			return d.errorf("expected ':' in map entry")
-		}
-		d.pos++
-
-		val := reflect.New(valType).Elem()
-		if err := d.unmarshalValue(val); err != nil {
-			return err
-		}
-
-		m.SetMapIndex(key, val)
-	}
-
-	fv.Set(m)
 	return nil
 }
 
@@ -1537,12 +1475,10 @@ func (d *decoder) skipValue() error {
 		return d.skipBalanced('(', ')')
 	case '[':
 		return d.skipBalanced('[', ']')
-	case '<':
-		return d.skipBalanced('<', '>')
 	default:
 		for d.pos < len(d.data) {
 			b := d.data[d.pos]
-			if b == ',' || b == ')' || b == ']' || b == '>' {
+			if b == ',' || b == ')' || b == ']' {
 				return nil
 			}
 			d.pos++

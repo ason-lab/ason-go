@@ -73,7 +73,7 @@ type MatrixUserWithNestedOptional struct {
 }
 
 func TestMatrix_A2_TypedSingleExtraFieldDropped(t *testing.T) {
-	input := []byte("{id:int,name:str,active:bool}:(42,Alice,true)")
+	input := []byte("{id,name,active}:(42,Alice,true)")
 	var dst MatrixPerson
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -84,7 +84,7 @@ func TestMatrix_A2_TypedSingleExtraFieldDropped(t *testing.T) {
 }
 
 func TestMatrix_A1_TypedSingleExactMatch(t *testing.T) {
-	input := []byte("{id:int,name:str}:(42,Alice)")
+	input := []byte("{id,name}:(42,Alice)")
 	var dst MatrixPerson
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -117,7 +117,7 @@ func TestMatrix_A2_UntypedSingleExtraFieldDropped(t *testing.T) {
 }
 
 func TestMatrix_A3_TypedSingleTargetExtraFieldDefaulted(t *testing.T) {
-	input := []byte("{id:int,name:str}:(42,Alice)")
+	input := []byte("{id,name}:(42,Alice)")
 	var dst MatrixPersonWithActive
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -139,7 +139,7 @@ func TestMatrix_A3_UntypedSingleTargetExtraFieldDefaulted(t *testing.T) {
 }
 
 func TestMatrix_A4_TypedSingleFieldReorder(t *testing.T) {
-	input := []byte("{active:bool,id:int,name:str}:(true,42,Alice)")
+	input := []byte("{active,id,name}:(true,42,Alice)")
 	var dst MatrixPersonWithActive
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -161,7 +161,7 @@ func TestMatrix_A4_UntypedSingleFieldReorder(t *testing.T) {
 }
 
 func TestMatrix_A5_TypedVecExtraFieldDropped(t *testing.T) {
-	input := []byte("[{id:int,name:str,active:bool}]:(42,Alice,true),(7,Bob,false)")
+	input := []byte("[{id,name,active}]:(42,Alice,true),(7,Bob,false)")
 	var dst []MatrixPerson
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -195,7 +195,7 @@ func TestMatrix_A5_UntypedVecExtraFieldDropped(t *testing.T) {
 }
 
 func TestMatrix_N1_TypedNestedExtraFieldsDropped(t *testing.T) {
-	input := []byte("{name:str,inner:{x:int,y:int,z:float,w:bool},flag:bool}:(test,(10,20,3.14,true),true)")
+	input := []byte("{name,inner@{x,y,z,w},flag}:(test,(10,20,3.14,true),true)")
 	var dst MatrixOuterThin
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -206,7 +206,7 @@ func TestMatrix_N1_TypedNestedExtraFieldsDropped(t *testing.T) {
 }
 
 func TestMatrix_N1_UntypedNestedExtraFieldsDropped(t *testing.T) {
-	input := []byte("{name,inner:{x,y,z,w},flag}:(test,(10,20,3.14,true),true)")
+	input := []byte("{name,inner@{x,y,z,w},flag}:(test,(10,20,3.14,true),true)")
 	var dst MatrixOuterThin
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -217,7 +217,7 @@ func TestMatrix_N1_UntypedNestedExtraFieldsDropped(t *testing.T) {
 }
 
 func TestMatrix_N2_TypedNestedVecExtraFieldsDropped(t *testing.T) {
-	input := []byte("[{name:str,tasks:[{title:str,done:bool,priority:int,weight:float}]}]:(Alpha,[(Design,true,1,0.5),(Code,false,2,0.8)]),(Beta,[(Test,false,3,1.0)])")
+	input := []byte("[{name,tasks@[{title,done,priority,weight}]}]:(Alpha,[(Design,true,1,0.5),(Code,false,2,0.8)]),(Beta,[(Test,false,3,1.0)])")
 	var dst []MatrixProjectThin
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -231,7 +231,7 @@ func TestMatrix_N2_TypedNestedVecExtraFieldsDropped(t *testing.T) {
 }
 
 func TestMatrix_N2_UntypedNestedVecExtraFieldsDropped(t *testing.T) {
-	input := []byte("[{name,tasks:[{title,done,priority,weight}]}]:(Alpha,[(Design,true,1,0.5),(Code,false,2,0.8)]),(Beta,[(Test,false,3,1.0)])")
+	input := []byte("[{name,tasks@[{title,done,priority,weight}]}]:(Alpha,[(Design,true,1,0.5),(Code,false,2,0.8)]),(Beta,[(Test,false,3,1.0)])")
 	var dst []MatrixProjectThin
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -245,7 +245,7 @@ func TestMatrix_N2_UntypedNestedVecExtraFieldsDropped(t *testing.T) {
 }
 
 func TestMatrix_O1_TypedOptionalSkipTrailing(t *testing.T) {
-	input := []byte("[{id:int,label:str?,score:float?,flag:bool}]:(1,hello,95.5,true),(2,,,false)")
+	input := []byte("[{id,label,score,flag}]:(1,hello,95.5,true),(2,,,false)")
 	var dst []MatrixDstFewerOptionals
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -262,7 +262,7 @@ func TestMatrix_O1_TypedOptionalSkipTrailing(t *testing.T) {
 }
 
 func TestMatrix_A6_TypedVecTargetExtraFieldDefaulted(t *testing.T) {
-	input := []byte("[{id:int,name:str}]:(42,Alice),(7,Bob)")
+	input := []byte("[{id,name}]:(42,Alice),(7,Bob)")
 	var dst []MatrixPersonWithActive
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -296,7 +296,7 @@ func TestMatrix_A6_UntypedVecTargetExtraFieldDefaulted(t *testing.T) {
 }
 
 func TestMatrix_N3_TypedDeepNestedExtraFieldsDropped(t *testing.T) {
-	input := []byte("{id:int,child:{name:str,sub:{a:int,b:str,c:bool},code:int,tags:[str]},extra:str}:(7,(leaf,(11,hello,true),99,[x,y]),tail)")
+	input := []byte("{id,child@{name,sub@{a,b,c},code,tags@[str]},extra}:(7,(leaf,(11,hello,true),99,[x,y]),tail)")
 	var dst MatrixL1Thin
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -307,7 +307,7 @@ func TestMatrix_N3_TypedDeepNestedExtraFieldsDropped(t *testing.T) {
 }
 
 func TestMatrix_N3_UntypedDeepNestedExtraFieldsDropped(t *testing.T) {
-	input := []byte("{id,child:{name,sub:{a,b,c},code,tags},extra}:(7,(leaf,(11,hello,true),99,[x,y]),tail)")
+	input := []byte("{id,child@{name,sub@{a,b,c},code,tags},extra}:(7,(leaf,(11,hello,true),99,[x,y]),tail)")
 	var dst MatrixL1Thin
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -335,7 +335,7 @@ func TestMatrix_O1_UntypedOptionalSkipTrailing(t *testing.T) {
 }
 
 func TestMatrix_P1_TypedPartialOverlap(t *testing.T) {
-	input := []byte("{id:int,name:str,score:float,active:bool}:(42,Alice,9.5,true)")
+	input := []byte("{id,name,score,active}:(42,Alice,9.5,true)")
 	var dst MatrixPersonScore
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -357,7 +357,7 @@ func TestMatrix_P1_UntypedPartialOverlap(t *testing.T) {
 }
 
 func TestMatrix_P2_TypedNoOverlapDefaults(t *testing.T) {
-	input := []byte("{id:int,name:str}:(42,Alice)")
+	input := []byte("{id,name}:(42,Alice)")
 	var dst MatrixNoOverlap
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -379,7 +379,7 @@ func TestMatrix_P2_UntypedNoOverlapDefaults(t *testing.T) {
 }
 
 func TestMatrix_N4_TypedNestedOptionalSubset(t *testing.T) {
-	input := []byte("[{id:int,profile:{name:str,nick:str?,score:float?},active:bool}]:(1,(Alice,ally,9.5),true),(2,(Bob,,),false)")
+	input := []byte("[{id,profile@{name,nick,score},active}]:(1,(Alice,ally,9.5),true),(2,(Bob,,),false)")
 	var dst []MatrixUserWithNestedOptional
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)
@@ -393,7 +393,7 @@ func TestMatrix_N4_TypedNestedOptionalSubset(t *testing.T) {
 }
 
 func TestMatrix_N4_UntypedNestedOptionalSubset(t *testing.T) {
-	input := []byte("[{id,profile:{name,nick,score},active}]:(1,(Alice,ally,9.5),true),(2,(Bob,,),false)")
+	input := []byte("[{id,profile@{name,nick,score},active}]:(1,(Alice,ally,9.5),true),(2,(Bob,,),false)")
 	var dst []MatrixUserWithNestedOptional
 	if err := Decode(input, &dst); err != nil {
 		t.Fatal(err)

@@ -19,7 +19,7 @@ var (
 	benchFlatUsers100       = makeFlatUsers(100)
 	benchFlatUsers1000      = makeFlatUsers(1000)
 	benchFlatStructUntyped  = []byte("{id,name,active}:(42,Alice,true)")
-	benchFlatStructTyped    = []byte("{id:int,name:str,active:bool}:(42,Alice,true)")
+	benchFlatStructTyped    = []byte("{id@int,name@str,active@bool}:(42,Alice,true)")
 	benchFlatStructJSON     = []byte(`{"id":42,"name":"Alice","active":true}`)
 	benchFlatVec100         = []byte(makeFlatUserVecText(100, false))
 	benchFlatVec100Typed    = []byte(makeFlatUserVecText(100, true))
@@ -78,7 +78,7 @@ func makeFlatUserVecText(n int, typed bool) string {
 	var b strings.Builder
 	b.Grow(n * 24)
 	if typed {
-		b.WriteString("[{id:int,name:str,active:bool}]:")
+		b.WriteString("[{id@int,name@str,active@bool}]:")
 	} else {
 		b.WriteString("[{id,name,active}]:")
 	}

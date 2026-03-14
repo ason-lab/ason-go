@@ -64,15 +64,20 @@ func TestCrossCompat_TrailingFieldsSingleStruct(t *testing.T) {
 }
 
 // ============================================================================
-// Dimension 2: Trailing field is a complex type (array, struct, map)
+// Dimension 2: Trailing field is a complex type (array, struct, entry list)
 // ============================================================================
 
+type MetaEntry struct {
+	Key   string `ason:"key"`
+	Value int64  `ason:"value"`
+}
+
 type RichProfile struct {
-	ID     int64            `ason:"id"`
-	Name   string           `ason:"name"`
-	Tags   []string         `ason:"tags"`
-	Scores []int64          `ason:"scores"`
-	Meta   map[string]int64 `ason:"meta"`
+	ID     int64       `ason:"id"`
+	Name   string      `ason:"name"`
+	Tags   []string    `ason:"tags"`
+	Scores []int64     `ason:"scores"`
+	Meta   []MetaEntry `ason:"meta"`
 }
 
 type ThinProfile struct {
@@ -80,13 +85,13 @@ type ThinProfile struct {
 	Name string `ason:"name"`
 }
 
-func TestCrossCompat_SkipTrailingArrayAndMap(t *testing.T) {
+func TestCrossCompat_SkipTrailingArrayAndEntryList(t *testing.T) {
 	src := RichProfile{
 		ID:     1,
 		Name:   "Alice",
 		Tags:   []string{"go", "rust"},
 		Scores: []int64{90, 85, 92},
-		Meta:   map[string]int64{"level": 5, "xp": 1200},
+		Meta:   []MetaEntry{{Key: "level", Value: 5}, {Key: "xp", Value: 1200}},
 	}
 	data, err := Encode(src)
 	if err != nil {
@@ -605,31 +610,31 @@ func TestCrossCompat_EmptyStringFields(t *testing.T) {
 }
 
 // ============================================================================
-// Dimension 16: Map field as trailing — complex skip
+// Dimension 16: Entry-list field as trailing — complex skip
 // ============================================================================
 
-type SrcWithMap struct {
-	ID   int64            `ason:"id"`
-	Name string           `ason:"name"`
-	Meta map[string]int64 `ason:"meta"`
+type SrcWithEntries struct {
+	ID   int64       `ason:"id"`
+	Name string      `ason:"name"`
+	Meta []MetaEntry `ason:"meta"`
 }
 
-type DstNoMap struct {
+type DstNoEntries struct {
 	ID   int64  `ason:"id"`
 	Name string `ason:"name"`
 }
 
-func TestCrossCompat_SkipTrailingMapField(t *testing.T) {
-	src := SrcWithMap{
+func TestCrossCompat_SkipTrailingEntryListField(t *testing.T) {
+	src := SrcWithEntries{
 		ID:   1,
 		Name: "Alice",
-		Meta: map[string]int64{"age": 30, "score": 95},
+		Meta: []MetaEntry{{Key: "age", Value: 30}, {Key: "score", Value: 95}},
 	}
 	data, err := Encode(src)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var dst DstNoMap
+	var dst DstNoEntries
 	if err := Decode(data, &dst); err != nil {
 		t.Fatal(err)
 	}

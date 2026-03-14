@@ -19,7 +19,7 @@ ASON 只写一次字段名，后续数据按位置存储：
 ```
 
 ```text
-[{id:int,name:str,active:bool}]:(1,Alice,true),(2,Bob,false)
+[{id@int,name@str,active@bool}]:(1,Alice,true),(2,Bob,false)
 ```
 
 这能减少重复键名、减小体积，并且通常降低解析成本。
@@ -63,7 +63,7 @@ func main() {
 
     typed, _ := ason.EncodeTyped(&user)
     fmt.Println(string(typed))
-    // {id:int,name:str,active:bool}:(1,Alice,true)
+    // {id@int,name@str,active@bool}:(1,Alice,true)
 
     var decoded User
     _ = ason.Decode(text, &decoded)
@@ -96,6 +96,26 @@ var decoded []User
 _ = ason.DecodeBinary(bin, &decoded)
 ```
 
+### 用 entry struct 表达键值集合
+
+```go
+type EnvEntry struct {
+    Key   string `ason:"key"`
+    Value string `ason:"value"`
+}
+
+type Config struct {
+    Name string     `ason:"name"`
+    Env  []EnvEntry `ason:"env"`
+}
+```
+
+对应的带类型 ASON 文本：
+
+```text
+{name@str,env@[{key@str,value@str}]}:(api,[(RUST_LOG,debug),(PORT,8080)])
+```
+
 ## 当前 API
 
 | 函数 | 作用 |
@@ -119,21 +139,21 @@ go run ./examples/bench
 
 - [Athan](https://github.com/athxx)
 
-## Benchmark Snapshot
+## Benchmarks
 
-在当前机器上通过下面命令实测：
+可通过下面命令运行：
 
 ```bash
 go run ./examples/bench
 ```
 
-关键结果：
+输出格式与 C / C++ 版本保持一致，例如：
 
-- 扁平 1,000 条记录：ASON 序列化 `15.71ms`，JSON `76.92ms`；反序列化 ASON `77.32ms`，JSON `380.56ms`
-- 扁平 10,000 条记录：ASON 序列化 `75.82ms`，JSON `173.69ms`；反序列化 ASON `283.21ms`，JSON `770.39ms`
-- 深层 100 条数据：ASON 序列化 `425.39ms`，JSON `699.25ms`；反序列化 ASON `1136.91ms`，JSON `3001.79ms`
-- 1,000 条记录吞吐总结：ASON 文本序列化比 JSON 快 `3.37x`，反序列化快 `4.40x`
-- 1,000 条扁平记录二进制总结：BIN 序列化 `22.8ms`，JSON `32.1ms`；BIN 反序列化 `15.2ms`，JSON `186.2ms`；二进制大小 `74,450 B`
+```text
+Serialize:   JSON    16.22ms | ASON    16.80ms (1x) | BIN    15.02ms (1.1x)
+Deserialize: JSON   111.90ms | ASON    35.50ms (3.2x) | BIN    35.10ms (3.2x)
+Size:        JSON   218737 B | ASON    84861 B (39%) | BIN    85282 B (39%)
+```
 
 ## 许可证
 

@@ -19,7 +19,7 @@ ASON writes field names once and stores rows positionally:
 ```
 
 ```text
-[{id:int,name:str,active:bool}]:(1,Alice,true),(2,Bob,false)
+[{id@int,name@str,active@bool}]:(1,Alice,true),(2,Bob,false)
 ```
 
 That reduces repeated keys, payload size, and often parsing cost.
@@ -30,6 +30,7 @@ That reduces repeated keys, payload size, and often parsing cost.
 - Current API uses `Encode` / `Decode`, not the older `Marshal` / `Unmarshal` names
 - Text, pretty text, and binary formats
 - Struct tags via `ason:"..."`, with `json` tag fallback
+- No native `map` / dictionary field syntax; model key-value data as slices of entry structs
 - Good fit for LLM payloads, internal services, logs, and fixtures
 
 ## Install
@@ -63,7 +64,7 @@ func main() {
 
     typed, _ := ason.EncodeTyped(&user)
     fmt.Println(string(typed))
-    // {id:int,name:str,active:bool}:(1,Alice,true)
+    // {id@int,name@str,active@bool}:(1,Alice,true)
 
     var decoded User
     _ = ason.Decode(text, &decoded)
@@ -96,6 +97,26 @@ var decoded []User
 _ = ason.DecodeBinary(bin, &decoded)
 ```
 
+### Model key-value data with entry structs
+
+```go
+type EnvEntry struct {
+    Key   string `ason:"key"`
+    Value string `ason:"value"`
+}
+
+type Config struct {
+    Name string     `ason:"name"`
+    Env  []EnvEntry `ason:"env"`
+}
+```
+
+Typed ASON output:
+
+```text
+{name@str,env@[{key@str,value@str}]}:(api,[(RUST_LOG,debug),(PORT,8080)])
+```
+
 ## Current API
 
 | Function | Purpose |
@@ -119,21 +140,21 @@ go run ./examples/bench
 
 - [Athan](https://github.com/athxx)
 
-## Benchmark Snapshot
+## Benchmarks
 
-Measured on this machine with:
+Run:
 
 ```bash
 go run ./examples/bench
 ```
 
-Headline numbers:
+The benchmark output now follows the same layout as the C and C++ versions:
 
-- Flat 1,000-record dataset: ASON serialize `15.71ms` vs JSON `76.92ms`, deserialize `77.32ms` vs JSON `380.56ms`
-- Flat 10,000-record dataset: ASON serialize `75.82ms` vs JSON `173.69ms`, deserialize `283.21ms` vs JSON `770.39ms`
-- Deep 100-record dataset: ASON serialize `425.39ms` vs JSON `699.25ms`, deserialize `1136.91ms` vs JSON `3001.79ms`
-- Throughput summary on 1,000 records: ASON text was `3.37x` faster than JSON for serialize and `4.40x` faster for deserialize
-- Binary summary on 1,000 flat records: BIN serialize `22.8ms` vs JSON `32.1ms`, BIN deserialize `15.2ms` vs JSON `186.2ms`, with binary size `74,450 B`
+```text
+Serialize:   JSON    16.22ms | ASON    16.80ms (1x) | BIN    15.02ms (1.1x)
+Deserialize: JSON   111.90ms | ASON    35.50ms (3.2x) | BIN    35.10ms (3.2x)
+Size:        JSON   218737 B | ASON    84861 B (39%) | BIN    85282 B (39%)
+```
 
 ## License
 

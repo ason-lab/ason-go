@@ -20,9 +20,14 @@ type Employee struct {
 	Active bool       `ason:"active" json:"active"`
 }
 
-type WithMap struct {
-	Name  string           `ason:"name" json:"name"`
-	Attrs map[string]int64 `ason:"attrs" json:"attrs"`
+type AttrEntry struct {
+	Key   string `ason:"key" json:"key"`
+	Value int64  `ason:"value" json:"value"`
+}
+
+type WithEntries struct {
+	Name  string      `ason:"name" json:"name"`
+	Attrs []AttrEntry `ason:"attrs" json:"attrs"`
 }
 
 type Person struct {
@@ -30,8 +35,13 @@ type Person struct {
 	Age  int64  `ason:"age" json:"age"`
 }
 
-type WithComplexMap struct {
-	Groups map[string][]Person `ason:"groups" json:"groups"`
+type GroupEntry struct {
+	Key   string   `ason:"key" json:"key"`
+	Value []Person `ason:"value" json:"value"`
+}
+
+type WithGroupEntries struct {
+	Groups []GroupEntry `ason:"groups" json:"groups"`
 }
 
 type Nested struct {
@@ -164,14 +174,19 @@ type LogConfig struct {
 	Rotate bool    `ason:"rotate" json:"rotate"`
 }
 
+type StringEntry struct {
+	Key   string `ason:"key" json:"key"`
+	Value string `ason:"value" json:"value"`
+}
+
 type ServiceConfig struct {
-	Name     string            `ason:"name" json:"name"`
-	Version  string            `ason:"version" json:"version"`
-	Db       DbConfig          `ason:"db" json:"db"`
-	Cache    CacheConfig       `ason:"cache" json:"cache"`
-	Log      LogConfig         `ason:"log" json:"log"`
-	Features []string          `ason:"features" json:"features"`
-	Env      map[string]string `ason:"env" json:"env"`
+	Name     string        `ason:"name" json:"name"`
+	Version  string        `ason:"version" json:"version"`
+	Db       DbConfig      `ason:"db" json:"db"`
+	Cache    CacheConfig   `ason:"cache" json:"cache"`
+	Log      LogConfig     `ason:"log" json:"log"`
+	Features []string      `ason:"features" json:"features"`
+	Env      []StringEntry `ason:"env" json:"env"`
 }
 
 func i64ptr(v int64) *int64   { return &v }
@@ -184,14 +199,14 @@ func main() {
 	// 1. Nested struct
 	fmt.Println("1. Nested struct:")
 	var emp Employee
-	if err := ason.Decode([]byte("{id,name,dept:{title},skills,active}:(1,Alice,(Manager),[rust],true)"), &emp); err != nil {
+	if err := ason.Decode([]byte("{id,name,dept@{title},skills,active}:(1,Alice,(Manager),[rust],true)"), &emp); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   %+v\n\n", emp)
 
 	// 2. Vec with nested structs
 	fmt.Println("2. Vec with nested structs:")
-	input2 := []byte(`[{id:int,name:str,dept:{title:str},skills:[str],active:bool}]:
+	input2 := []byte(`[{id,name,dept@{title},skills@[str],active}]:
   (1, Alice, (Manager), [Rust, Go], true),
   (2, Bob, (Engineer), [Python], false),
   (3, "Carol Smith", (Director), [Leadership, Strategy], true)`)
@@ -203,18 +218,18 @@ func main() {
 		fmt.Printf("   %+v\n", e)
 	}
 
-	// 3. Map/Dict field
-	fmt.Println("\n3. Map/Dict field:")
-	var wm WithMap
-	if err := ason.Decode([]byte("{name,attrs}:(Alice,<age:30,score:95>)"), &wm); err != nil {
+	// 3. Entry-list field
+	fmt.Println("\n3. Entry-list field:")
+	var wm WithEntries
+	if err := ason.Decode([]byte("{name,attrs@[{key,value}]}:(Alice,[(age,30),(score,95)])"), &wm); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   %+v\n", wm)
 
-	// 3b. Complex map field
-	fmt.Println("\n3b. Complex map field:")
-	var groups WithComplexMap
-	if err := ason.Decode([]byte("{groups:<str:[{name:str,age:int}]>}:(<teamA:[(Alice,30),(Bob,28)],teamB:[(Carol,41)]>)"), &groups); err != nil {
+	// 3b. Nested entry-list field
+	fmt.Println("\n3b. Nested entry-list field:")
+	var groups WithGroupEntries
+	if err := ason.Decode([]byte("{groups@[{key,value@[{name,age}]}]}:([(teamA,[(Alice,30),(Bob,28)]),(teamB,[(Carol,41)])])"), &groups); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   %+v\n", groups)
@@ -477,17 +492,17 @@ func main() {
 		(1.0-float64(len(s))/float64(len(jsonBytes)))*100.0)
 
 	// 11. Service config
-	fmt.Println("\n11. Complex config struct (nested + map + optional):")
+	fmt.Println("\n11. Complex config struct (nested + entry list + optional):")
 	config := ServiceConfig{
 		Name: "my-service", Version: "2.1.0",
 		Db:       DbConfig{Host: "db.example.com", Port: 5432, MaxConnections: 100, SSL: true, TimeoutMs: 3000.5},
 		Cache:    CacheConfig{Enabled: true, TTLSeconds: 3600, MaxSizeMb: 512},
 		Log:      LogConfig{Level: "info", File: strptr("/var/log/app.log"), Rotate: true},
 		Features: []string{"auth", "rate-limit", "websocket"},
-		Env: map[string]string{
-			"RUST_LOG":     "debug",
-			"DATABASE_URL": "postgres://localhost:5432/mydb",
-			"SECRET_KEY":   "abc123!@#",
+		Env: []StringEntry{
+			{Key: "RUST_LOG", Value: "debug"},
+			{Key: "DATABASE_URL", Value: "postgres://localhost:5432/mydb"},
+			{Key: "SECRET_KEY", Value: "abc123!@#"},
 		},
 	}
 	s, err = ason.Encode(&config)
@@ -589,7 +604,7 @@ func main() {
 
 	// 13. Deserialize with nested schema type hints
 	fmt.Println("\n13. Deserialize with nested schema type hints:")
-	deepInput := []byte("{name:str,code:str,population:int,gdp_trillion:float,regions:[{name:str,cities:[{name:str,population:int,area_km2:float,districts:[{name:str,population:int,streets:[{name:str,length_km:float,buildings:[{name:str,floors:int,residential:bool,height_m:float}]}]}]}]}]}:(TestLand,TL,1000000,0.5,[(TestRegion,[(TestCity,500000,100.0,[(Central,250000,[(Main St,2.5,[(HQ,10,false,45.0)])])])])])")
+	deepInput := []byte("{name,code,population,gdp_trillion,regions@[{name,cities@[{name,population,area_km2,districts@[{name,population,streets@[{name,length_km,buildings@[{name,floors,residential,height_m}]}]}]}]}]}:(TestLand,TL,1000000,0.5,[(TestRegion,[(TestCity,500000,100.0,[(Central,250000,[(Main St,2.5,[(HQ,10,false,45.0)])])])])])")
 	var dc Country
 	if err := ason.Decode(deepInput, &dc); err != nil {
 		log.Fatal(err)
@@ -605,7 +620,7 @@ func main() {
 	fmt.Printf("   Building at depth 6: %+v\n", bld)
 
 	// 14. Typed serialization
-	fmt.Println("\n14. Typed serialization (MarshalTyped):")
+	fmt.Println("\n14. Typed serialization (EncodeTyped):")
 	empForTyped := Employee{ID: 1, Name: "Alice", Dept: Department{Title: "Engineering"}, Skills: []string{"Rust", "Go"}, Active: true}
 	typedBytes, err := ason.EncodeTyped(&empForTyped)
 	if err != nil {
@@ -728,7 +743,7 @@ func main() {
 	// 17. Comments
 	fmt.Println("\n17. Comments:")
 	var empComment Employee
-	if err := ason.Decode([]byte("{id,name,dept:{title},skills,active}:/* inline */ (1,Alice,(HR),[rust],true)"), &empComment); err != nil {
+	if err := ason.Decode([]byte("{id,name,dept@{title},skills,active}:/* inline */ (1,Alice,(HR),[rust],true)"), &empComment); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   with inline comment: %+v\n", empComment)

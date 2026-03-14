@@ -5,15 +5,15 @@ package ason
 // ---------------------------------------------------------------------------
 //
 // Simple structures stay inline:
-//   {name:str, age:int}:(Alice, 30)
+//   {name, age}:(Alice, 30)
 //
 // Complex structures expand with 2-space indentation:
 //   {
-//     id:str,
-//     name:str,
-//     projects:[{
-//       projectId:str,
-//       tasks:[{taskId:str, status:str}]
+//     id,
+//     name,
+//     projects@[{
+//       projectId,
+//       tasks@[{taskId, status}]
 //     }]
 //   }:
 //     (
@@ -87,9 +87,9 @@ func buildMatchTable(src []byte) []int {
 		switch src[i] {
 		case '"':
 			inQuote = true
-		case '{', '(', '[', '<':
+		case '{', '(', '[':
 			stack = append(stack, i)
-		case '}', ')', ']', '>':
+		case '}', ')', ']':
 			if len(stack) > 0 {
 				j := stack[len(stack)-1]
 				stack = stack[:len(stack)-1]
@@ -178,7 +178,7 @@ func (f *prettyFmt) writeGroup() {
 		return
 	}
 	ch := f.src[f.pos]
-		if ch != '{' && ch != '(' && ch != '[' && ch != '<' {
+	if ch != '{' && ch != '(' && ch != '[' {
 		f.writeValue()
 		return
 	}
@@ -255,7 +255,7 @@ func (f *prettyFmt) writeGroup() {
 func (f *prettyFmt) writeElement(boundary int) {
 	for f.pos < boundary && f.src[f.pos] != ',' {
 		ch := f.src[f.pos]
-		if ch == '{' || ch == '(' || ch == '[' || ch == '<' {
+		if ch == '{' || ch == '(' || ch == '[' {
 			f.writeGroup()
 		} else if ch == '"' {
 			f.writeQuoted()
@@ -270,7 +270,7 @@ func (f *prettyFmt) writeElement(boundary int) {
 func (f *prettyFmt) writeValue() {
 	for f.pos < len(f.src) {
 		ch := f.src[f.pos]
-		if ch == ',' || ch == ')' || ch == '}' || ch == ']' || ch == '>' {
+		if ch == ',' || ch == ')' || ch == '}' || ch == ']' {
 			break
 		}
 		if ch == '"' {
@@ -319,10 +319,10 @@ func (f *prettyFmt) writeInline(start, end int) {
 		case '"':
 			inQuote = true
 			f.out = append(f.out, ch)
-		case '{', '(', '[', '<':
+		case '{', '(', '[':
 			depth++
 			f.out = append(f.out, ch)
-		case '}', ')', ']', '>':
+		case '}', ')', ']':
 			depth--
 			f.out = append(f.out, ch)
 		case ',':

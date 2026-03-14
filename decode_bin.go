@@ -158,33 +158,7 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		}
 		return data, nil
 	case reflect.Map:
-		if len(data) < 4 {
-			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading map length"}
-		}
-		n := int(binary.LittleEndian.Uint32(data))
-		data = data[4:]
-		
-		if rv.IsNil() {
-			rv.Set(reflect.MakeMapWithSize(rv.Type(), n))
-		}
-		
-		keyType := rv.Type().Key()
-		valType := rv.Type().Elem()
-		var err error
-		for i := 0; i < n; i++ {
-			k := reflect.New(keyType).Elem()
-			data, err = unmarshalBinValue(data, k)
-			if err != nil {
-				return data, err
-			}
-			v := reflect.New(valType).Elem()
-			data, err = unmarshalBinValue(data, v)
-			if err != nil {
-				return data, err
-			}
-			rv.SetMapIndex(k, v)
-		}
-		return data, nil
+		return data, &UnmarshalError{Pos: 0, Message: "map fields are no longer supported; use a slice of entry structs"}
 	case reflect.Struct:
 		si := getStructInfo(rv.Type())
 		var err error

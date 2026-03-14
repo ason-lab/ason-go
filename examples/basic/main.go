@@ -27,7 +27,7 @@ func main() {
 	fmt.Println("Serialize single struct:")
 	fmt.Printf("  %s\n\n", b)
 
-	// 2. Serialize with type annotations (MarshalTyped)
+	// 2. Serialize with type annotations
 	typed, err := ason.EncodeTyped(&user)
 	if err != nil {
 		log.Fatal(err)
@@ -36,7 +36,7 @@ func main() {
 	fmt.Printf("  %s\n\n", typed)
 
 	// 3. Deserialize from ASON (accepts both annotated and unannotated)
-	input := []byte("{id:int,name:str,active:bool}:(1,Alice,true)")
+	input := []byte("{id@int,name@str,active@bool}:(1,Alice,true)")
 	var u User
 	if err := ason.Decode(input, &u); err != nil {
 		log.Fatal(err)
@@ -66,7 +66,7 @@ func main() {
 	fmt.Printf("  %s\n\n", typedVec)
 
 	// 6. Deserialize vec
-	vecInput := []byte(`[{id:int,name:str,active:bool}]:(1,Alice,true),(2,Bob,false),(3,"Carol Smith",true)`)
+	vecInput := []byte(`[{id@int,name@str,active@bool}]:(1,Alice,true),(2,Bob,false),(3,"Carol Smith",true)`)
 	var parsed []User
 	if err := ason.Decode(vecInput, &parsed); err != nil {
 		log.Fatal(err)
@@ -78,7 +78,7 @@ func main() {
 
 	// 7. Multiline format
 	fmt.Println("\nMultiline format:")
-	multiline := []byte(`[{id:int, name:str, active:bool}]:
+	multiline := []byte(`[{id, name, active}]:
   (1, Alice, true),
   (2, Bob, false),
   (3, "Carol Smith", true)`)

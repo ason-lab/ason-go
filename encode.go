@@ -23,9 +23,6 @@ var needsQuote = func() [256]bool {
 	t[')'] = true
 	t['['] = true
 	t[']'] = true
-	t['<'] = true
-	t['>'] = true
-	t[':'] = true
 	t['"'] = true
 	t['\\'] = true
 	return t
@@ -63,6 +60,12 @@ var bufPool = sync.Pool{
 		b := make([]byte, 0, 256)
 		return &b
 	},
+}
+
+var noMapTypeCache sync.Map // map[reflect.Type]bool
+
+var errMapFieldsUnsupported = &MarshalError{
+	Message: "map fields are no longer supported; model key-value data as a slice of entry structs",
 }
 
 func getBuf() *[]byte {
@@ -373,7 +376,7 @@ func indexOf(s string, c byte) int {
 // ---------------------------------------------------------------------------
 
 // appendStructSchema writes {field1,field2,...} for a struct type.
-// For nested struct/slice-of-struct fields, it recurses into the nested schema.
+// Nested structs and arrays always keep their @-scaffold in the field schema.
 func appendStructSchema(buf []byte, si *structInfo, typed bool) []byte {
 	buf = append(buf, '{')
 	for i, fi := range si.fields {
@@ -431,69 +434,62 @@ func appendFieldSchema(buf []byte, fi fieldInfo, typed bool) []byte {
 	return buf
 }
 
-func appendTypeSchema(buf []byte, t reflect.Type, typed bool, withColon bool) ([]byte, bool) {
-	if !typed {
-		return buf, false
+func appendArraySchema(buf []byte, t reflect.Type, typed bool) ([]byte, bool) {
+	buf = append(buf, '[')
+	elemType := t.Elem()
+	for elemType.Kind() == reflect.Ptr {
+		elemType = elemType.Elem()
 	}
+	switch elemType.Kind() {
+	case reflect.Struct:
+		buf = appendStructSchema(buf, getStructInfo(elemType), typed)
+	case reflect.Slice, reflect.Array:
+		var ok bool
+		buf, ok = appendArraySchema(buf, elemType, typed)
+		if !ok {
+			return buf[:len(buf)-1], false
+		}
+	default:
+		if typed {
+			hint := typeHintForKind(elemType.Kind())
+			if hint == "" {
+				return buf[:len(buf)-1], false
+			}
+			buf = append(buf, hint...)
+		}
+	}
+	buf = append(buf, ']')
+	return buf, true
+}
+
+func appendTypeSchema(buf []byte, t reflect.Type, typed bool, withMarker bool) ([]byte, bool) {
 	for t.Kind() == reflect.Ptr {
 		t = t.Elem()
-	}
-	if withColon {
-		buf = append(buf, ':')
 	}
 
 	switch t.Kind() {
 	case reflect.Struct:
+		if withMarker {
+			buf = append(buf, '@')
+		}
 		return appendStructSchema(buf, getStructInfo(t), typed), true
-	case reflect.Slice:
-		elemType := t.Elem()
-		for elemType.Kind() == reflect.Ptr {
-			elemType = elemType.Elem()
+	case reflect.Slice, reflect.Array:
+		if withMarker {
+			buf = append(buf, '@')
 		}
-		buf = append(buf, '[')
-		if elemType.Kind() == reflect.Struct {
-			buf = appendStructSchema(buf, getStructInfo(elemType), typed)
-			buf = append(buf, ']')
-			return buf, true
-		}
-		hint := typeHintForKind(elemType.Kind())
-		if hint == "" {
-			if withColon {
-				return buf[:len(buf)-1], false
-			}
-			return buf, false
-		}
-		buf = append(buf, hint...)
-		buf = append(buf, ']')
-		return buf, true
+		return appendArraySchema(buf, t, typed)
 	case reflect.Map:
-		keyHint := typeHintForKind(t.Key().Kind())
-		if keyHint == "" {
-			if withColon {
-				return buf[:len(buf)-1], false
-			}
+		return buf, false
+	default:
+		if !typed {
 			return buf, false
 		}
-		buf = append(buf, '<')
-		buf = append(buf, keyHint...)
-		buf = append(buf, ':')
-		var ok bool
-		buf, ok = appendTypeSchema(buf, t.Elem(), typed, false)
-		if !ok {
-			if withColon {
-				return buf[:len(buf)-(len(keyHint)+3)], false
-			}
-			return buf[:len(buf)-(len(keyHint)+2)], false
-		}
-		buf = append(buf, '>')
-		return buf, true
-	default:
 		hint := typeHintForKind(t.Kind())
 		if hint == "" {
-			if withColon {
-				return buf[:len(buf)-1], false
-			}
 			return buf, false
+		}
+		if withMarker {
+			buf = append(buf, '@')
 		}
 		buf = append(buf, hint...)
 		return buf, true
@@ -520,8 +516,6 @@ func typeHintForKind(k reflect.Kind) string {
 // Public API
 // ---------------------------------------------------------------------------
 
-// Marshal serializes a struct to ASON format.
-// Output: {field1,field2,...}:(val1,val2,...)
 // Encode serializes a struct or slice of structs to ASON format.
 // Single struct output: {field1,field2,...}:(val1,val2,...)
 // Slice output: [{field1,field2,...}]:(val1,val2,...),(val3,val4,...)
@@ -529,9 +523,10 @@ func Encode(v any) ([]byte, error) {
 	return encodeInner(v, false)
 }
 
-// EncodeTyped serializes a struct or slice of structs to ASON format with type annotations.
-// Single: {field1:type1,field2:type2,...}:(val1,val2,...)
-// Slice: [{field1:type1,...}]:(val1,val2,...),(val3,val4,...)
+// EncodeTyped serializes a struct or slice of structs to ASON format with
+// `@` type annotations and structural markers.
+// Single: {field1@type1,field2@type2,...}:(val1,val2,...)
+// Slice: [{field1@type1,...}]:(val1,val2,...),(val3,val4,...)
 func EncodeTyped(v any) ([]byte, error) {
 	return encodeInner(v, true)
 }
@@ -554,13 +549,22 @@ func encodeInner(v any, typed bool) ([]byte, error) {
 	if rv.Kind() != reflect.Struct {
 		return nil, &MarshalError{"Encode requires a struct or slice of structs"}
 	}
+	if err := ensureNoMapType(rv.Type()); err != nil {
+		return nil, err
+	}
 
 	bp := getBuf()
 	buf := *bp
 
 	si := getStructInfo(rv.Type())
 	buf = append(buf, si.structHeader(typed)...)
-	buf = marshalStruct(buf, rv, si, true)
+	var err error
+	buf, err = marshalStruct(buf, rv, si)
+	if err != nil {
+		*bp = buf
+		putBuf(bp)
+		return nil, err
+	}
 
 	result := make([]byte, len(buf))
 	copy(result, buf)
@@ -586,6 +590,9 @@ func encodeSliceInner(v any, typed bool) ([]byte, error) {
 	if elemType.Kind() != reflect.Struct {
 		return nil, &MarshalError{"Encode requires a slice of structs"}
 	}
+	if err := ensureNoMapType(elemType); err != nil {
+		return nil, err
+	}
 
 	si := getStructInfo(elemType)
 
@@ -603,7 +610,13 @@ func encodeSliceInner(v any, typed bool) ([]byte, error) {
 		if elem.Kind() == reflect.Ptr {
 			elem = elem.Elem()
 		}
-		buf = marshalStruct(buf, elem, si, false)
+		var err error
+		buf, err = marshalStruct(buf, elem, si)
+		if err != nil {
+			*bp = buf
+			putBuf(bp)
+			return nil, err
+		}
 	}
 
 	result := make([]byte, len(buf))
@@ -617,79 +630,27 @@ func encodeSliceInner(v any, typed bool) ([]byte, error) {
 // Internal marshal functions
 // ---------------------------------------------------------------------------
 
-func marshalStruct(buf []byte, rv reflect.Value, si *structInfo, isTop bool) []byte {
+func marshalStruct(buf []byte, rv reflect.Value, si *structInfo) ([]byte, error) {
 	buf = append(buf, '(')
 	for i, fi := range si.fields {
 		if i > 0 {
 			buf = append(buf, ',')
 		}
 		fv := rv.FieldByIndex(fi.index)
-		buf = marshalNestedValue(buf, fv)
+		var err error
+		buf, err = marshalNestedValue(buf, fv)
+		if err != nil {
+			return buf, err
+		}
 	}
 	buf = append(buf, ')')
-	return buf
+	return buf, nil
 }
 
-// marshalFieldValue marshals a value and returns the type hint (for typed mode).
-func marshalFieldValue(buf []byte, fv reflect.Value, typed bool) ([]byte, string) {
-	hint := ""
-	// Unwrap pointer
-	for fv.Kind() == reflect.Ptr {
-		if fv.IsNil() {
-			return buf, ""
-		}
-		fv = fv.Elem()
-	}
-
-	switch fv.Kind() {
-	case reflect.Bool:
-		if typed {
-			hint = "bool"
-		}
-		if fv.Bool() {
-			buf = append(buf, "true"...)
-		} else {
-			buf = append(buf, "false"...)
-		}
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		if typed {
-			hint = "int"
-		}
-		buf = appendI64(buf, fv.Int())
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		if typed {
-			hint = "int"
-		}
-		buf = appendU64(buf, fv.Uint())
-	case reflect.Float32, reflect.Float64:
-		if typed {
-			hint = "float"
-		}
-		buf = appendFloat64(buf, fv.Float())
-	case reflect.String:
-		if typed {
-			hint = "str"
-		}
-		buf = appendStr(buf, fv.String())
-	case reflect.Slice:
-		buf = marshalSliceValue(buf, fv)
-	case reflect.Map:
-		buf = marshalMapValue(buf, fv)
-	case reflect.Struct:
-		si := getStructInfo(fv.Type())
-		buf = marshalStruct(buf, fv, si, false)
-	case reflect.Interface:
-		if !fv.IsNil() {
-			buf = marshalNestedValue(buf, fv.Elem())
-		}
-	}
-	return buf, hint
-}
-
-func marshalNestedValue(buf []byte, fv reflect.Value) []byte {
+func marshalNestedValue(buf []byte, fv reflect.Value) ([]byte, error) {
 	for fv.Kind() == reflect.Ptr || fv.Kind() == reflect.Interface {
 		if fv.IsNil() {
-			return buf
+			return buf, nil
 		}
 		fv = fv.Elem()
 	}
@@ -709,44 +670,81 @@ func marshalNestedValue(buf []byte, fv reflect.Value) []byte {
 		buf = appendFloat64(buf, fv.Float())
 	case reflect.String:
 		buf = appendStr(buf, fv.String())
-	case reflect.Slice:
-		buf = marshalSliceValue(buf, fv)
+	case reflect.Slice, reflect.Array:
+		var err error
+		buf, err = marshalSliceValue(buf, fv)
+		if err != nil {
+			return buf, err
+		}
 	case reflect.Map:
-		buf = marshalMapValue(buf, fv)
+		return buf, errMapFieldsUnsupported
 	case reflect.Struct:
 		si := getStructInfo(fv.Type())
-		buf = marshalStruct(buf, fv, si, false)
+		var err error
+		buf, err = marshalStruct(buf, fv, si)
+		if err != nil {
+			return buf, err
+		}
 	}
-	return buf
+	return buf, nil
 }
 
-func marshalSliceValue(buf []byte, fv reflect.Value) []byte {
+func marshalSliceValue(buf []byte, fv reflect.Value) ([]byte, error) {
 	buf = append(buf, '[')
 	for i := 0; i < fv.Len(); i++ {
 		if i > 0 {
 			buf = append(buf, ',')
 		}
-		buf = marshalNestedValue(buf, fv.Index(i))
+		var err error
+		buf, err = marshalNestedValue(buf, fv.Index(i))
+		if err != nil {
+			return buf, err
+		}
 	}
 	buf = append(buf, ']')
-	return buf
+	return buf, nil
 }
 
-func marshalMapValue(buf []byte, fv reflect.Value) []byte {
-	buf = append(buf, '<')
-	iter := fv.MapRange()
-	first := true
-	for iter.Next() {
-		if !first {
-			buf = append(buf, ',', ' ')
-		}
-		first = false
-		buf = marshalNestedValue(buf, iter.Key())
-		buf = append(buf, ':')
-		buf = marshalNestedValue(buf, iter.Value())
+func validateNoMapType(t reflect.Type, seen map[reflect.Type]bool) error {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
 	}
-	buf = append(buf, '>')
-	return buf
+	if seen[t] {
+		return nil
+	}
+	seen[t] = true
+	switch t.Kind() {
+	case reflect.Map:
+		return errMapFieldsUnsupported
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
+			f := t.Field(i)
+			if !f.IsExported() {
+				continue
+			}
+			if err := validateNoMapType(f.Type, seen); err != nil {
+				return err
+			}
+		}
+	case reflect.Slice, reflect.Array:
+		return validateNoMapType(t.Elem(), seen)
+	}
+	return nil
+}
+
+func ensureNoMapType(t reflect.Type) error {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if cached, ok := noMapTypeCache.Load(t); ok {
+		if cached.(bool) {
+			return nil
+		}
+		return errMapFieldsUnsupported
+	}
+	err := validateNoMapType(t, make(map[reflect.Type]bool))
+	noMapTypeCache.Store(t, err == nil)
+	return err
 }
 
 // unsafeString converts a byte slice to string without copying.

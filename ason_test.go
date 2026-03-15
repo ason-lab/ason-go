@@ -188,6 +188,76 @@ func TestEscapeRoundtrip(t *testing.T) {
 	}
 }
 
+func TestAtStringRoundtripAllApis(t *testing.T) {
+	note := Note{Text: "@Alice"}
+
+	untyped, err := Encode(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(untyped) != `{text}:("@Alice")` {
+		t.Fatalf("unexpected untyped encode: %s", untyped)
+	}
+	var out Note
+	if err := Decode(untyped, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != note {
+		t.Fatalf("Decode mismatch: %+v != %+v", out, note)
+	}
+
+	typed, err := EncodeTyped(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(typed) != `{text@str}:("@Alice")` {
+		t.Fatalf("unexpected typed encode: %s", typed)
+	}
+	out = Note{}
+	if err := Decode(typed, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != note {
+		t.Fatalf("typed Decode mismatch: %+v != %+v", out, note)
+	}
+
+	pretty, err := EncodePretty(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = Note{}
+	if err := Decode(pretty, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != note {
+		t.Fatalf("pretty Decode mismatch: %+v != %+v", out, note)
+	}
+
+	prettyTyped, err := EncodePrettyTyped(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = Note{}
+	if err := Decode(prettyTyped, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != note {
+		t.Fatalf("pretty typed Decode mismatch: %+v != %+v", out, note)
+	}
+
+	bin, err := EncodeBinary(note)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = Note{}
+	if err := DecodeBinary(bin, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != note {
+		t.Fatalf("binary Decode mismatch: %+v != %+v", out, note)
+	}
+}
+
 func TestTrailingComma(t *testing.T) {
 	input := "[{id,name,active}]:(1,Alice,true),(2,Bob,false),"
 	var users []User

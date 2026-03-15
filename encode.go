@@ -19,6 +19,7 @@ var needsQuote = func() [256]bool {
 		t[i] = true
 	}
 	t[','] = true
+	t['@'] = true
 	t['('] = true
 	t[')'] = true
 	t['['] = true

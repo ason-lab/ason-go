@@ -1374,7 +1374,7 @@ func TestDecodeQuotedSchemaFieldNames(t *testing.T) {
 	}
 }
 
-func TestDecodeRejectsSchemaTypeAliases(t *testing.T) {
+func TestDecodeRejectsInvalidSchemaTypes(t *testing.T) {
 	var out struct {
 		ID    int64   `ason:"id"`
 		Name  string  `ason:"name"`
@@ -1383,12 +1383,12 @@ func TestDecodeRejectsSchemaTypeAliases(t *testing.T) {
 	}
 
 	for _, input := range []string{
-		"{id@integer,name@str}:(1,Alice)",
-		"{id@int,name@string}:(1,Alice)",
-		"{id@int,score@double}:(1,3.5)",
-		"{id@int,alive@boolean}:(1,true)",
-		"{items@[string]}:([Alice])",
-		"{profile@{name@string}}:((Alice))",
+		"{id@numx,name@str}:(1,Alice)",
+		"{id@int,name@textx}:(1,Alice)",
+		"{id@int,score@decimalx}:(1,3.5)",
+		"{id@int,alive@flagx}:(1,true)",
+		"{items@[textx]}:([Alice])",
+		"{profile@{name@textx}}:((Alice))",
 	} {
 		if err := Decode([]byte(input), &out); err == nil {
 			t.Fatalf("expected alias rejection for %q", input)

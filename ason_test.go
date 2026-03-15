@@ -1373,3 +1373,25 @@ func TestDecodeQuotedSchemaFieldNames(t *testing.T) {
 		t.Fatalf("unexpected decode: %#v", v)
 	}
 }
+
+func TestDecodeRejectsSchemaTypeAliases(t *testing.T) {
+	var out struct {
+		ID    int64   `ason:"id"`
+		Name  string  `ason:"name"`
+		Score float64 `ason:"score"`
+		Alive bool    `ason:"alive"`
+	}
+
+	for _, input := range []string{
+		"{id@integer,name@str}:(1,Alice)",
+		"{id@int,name@string}:(1,Alice)",
+		"{id@int,score@double}:(1,3.5)",
+		"{id@int,alive@boolean}:(1,true)",
+		"{items@[string]}:([Alice])",
+		"{profile@{name@string}}:((Alice))",
+	} {
+		if err := Decode([]byte(input), &out); err == nil {
+			t.Fatalf("expected alias rejection for %q", input)
+		}
+	}
+}

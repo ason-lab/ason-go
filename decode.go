@@ -507,26 +507,12 @@ func (d *decoder) parseSchema() ([]string, string, error) {
 			return nil, "", d.errorf("legacy ':' field annotations are not supported; use '@'")
 		}
 
-		// Skip optional type annotation after '@'
+		// Validate and skip optional type annotation after '@'
 		if d.pos < len(d.data) && d.data[d.pos] == '@' {
 			d.pos++
 			d.skipWhitespace()
-			if d.pos < len(d.data) && d.data[d.pos] == '{' {
-				if err := d.skipBalanced('{', '}'); err != nil {
-					return nil, "", err
-				}
-			} else if d.pos < len(d.data) && d.data[d.pos] == '[' {
-				if err := d.skipBalanced('[', ']'); err != nil {
-					return nil, "", err
-				}
-			} else {
-				for d.pos < len(d.data) {
-					b := d.data[d.pos]
-					if b == ',' || b == '}' || b == ' ' || b == '\t' {
-						break
-					}
-					d.pos++
-				}
+			if err := d.parseSchemaAnnotation(); err != nil {
+				return nil, "", err
 			}
 		}
 
@@ -535,6 +521,65 @@ func (d *decoder) parseSchema() ([]string, string, error) {
 	key := unsafeString(d.data[start:d.pos])
 	schemaFieldsCache.Store(key, fields)
 	return fields, key, nil
+}
+
+func (d *decoder) parseSchemaAnnotation() error {
+	if d.pos >= len(d.data) {
+		return d.errorf("expected schema type after '@'")
+	}
+	switch d.data[d.pos] {
+	case '{':
+		_, _, err := d.parseSchema()
+		return err
+	case '[':
+		d.pos++
+		d.skipWhitespace()
+		if d.pos < len(d.data) && d.data[d.pos] == ']' {
+			d.pos++
+			return nil
+		}
+		if d.pos < len(d.data) && d.data[d.pos] == '{' {
+			if _, _, err := d.parseSchema(); err != nil {
+				return err
+			}
+		} else {
+			if err := d.parseAllowedSchemaScalarType(); err != nil {
+				return err
+			}
+		}
+		d.skipWhitespace()
+		if d.pos >= len(d.data) || d.data[d.pos] != ']' {
+			return d.errorf("expected ']' in array type annotation")
+		}
+		d.pos++
+		return nil
+	default:
+		return d.parseAllowedSchemaScalarType()
+	}
+}
+
+func (d *decoder) parseAllowedSchemaScalarType() error {
+	start := d.pos
+	for d.pos < len(d.data) {
+		b := d.data[d.pos]
+		if b == ',' || b == '}' || b == ']' || b == ' ' || b == '\t' {
+			break
+		}
+		d.pos++
+	}
+	if start == d.pos {
+		return d.errorf("expected schema type after '@'")
+	}
+	token := unsafeString(d.data[start:d.pos])
+	if strings.HasSuffix(token, "?") {
+		token = token[:len(token)-1]
+	}
+	switch token {
+	case "int", "str", "float", "bool":
+		return nil
+	default:
+		return d.errorf("unsupported schema type %q; use int, str, float, or bool", token)
+	}
 }
 
 func (d *decoder) skipBalanced(open, close byte) error {

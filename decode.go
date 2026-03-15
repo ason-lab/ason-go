@@ -391,12 +391,27 @@ func scanSchemaEnd(data []byte, pos int) (int, error) {
 			pos++
 			pos = skipInlineWhitespace(data, pos)
 		}
-		for pos < len(data) {
-			b := data[pos]
-			if b == ',' || b == '}' || b == '@' || b == ':' || b == ' ' || b == '\t' {
-				break
-			}
+		if pos < len(data) && data[pos] == '"' {
 			pos++
+			for pos < len(data) {
+				b := data[pos]
+				if b == '\\' && pos+1 < len(data) {
+					pos += 2
+					continue
+				}
+				pos++
+				if b == '"' {
+					break
+				}
+			}
+		} else {
+			for pos < len(data) {
+				b := data[pos]
+				if b == ',' || b == '}' || b == '@' || b == ':' || b == ' ' || b == '\t' {
+					break
+				}
+				pos++
+			}
 		}
 		pos = skipInlineWhitespace(data, pos)
 		if pos < len(data) && data[pos] == ':' {
@@ -468,15 +483,24 @@ func (d *decoder) parseSchema() ([]string, string, error) {
 		}
 
 		// Parse field name
-		start := d.pos
-		for d.pos < len(d.data) {
-			b := d.data[d.pos]
-			if b == ',' || b == '}' || b == '@' || b == ':' || b == ' ' || b == '\t' {
-				break
+		var name string
+		if d.pos < len(d.data) && d.data[d.pos] == '"' {
+			parsed, err := d.parseQuotedString()
+			if err != nil {
+				return nil, "", err
 			}
-			d.pos++
+			name = parsed
+		} else {
+			start := d.pos
+			for d.pos < len(d.data) {
+				b := d.data[d.pos]
+				if b == ',' || b == '}' || b == '@' || b == ':' || b == ' ' || b == '\t' {
+					break
+				}
+				d.pos++
+			}
+			name = unsafeString(d.data[start:d.pos])
 		}
-		name := unsafeString(d.data[start:d.pos])
 		d.skipWhitespace()
 
 		if d.pos < len(d.data) && d.data[d.pos] == ':' {

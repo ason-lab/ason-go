@@ -1189,6 +1189,12 @@ type PlusMinusFields struct {
 	Name        string `ason:"name"`
 }
 
+type QuotedSchemaFields struct {
+	IDUUID  int64  `ason:"id uuid"`
+	Numeric string `ason:"65"`
+	Special bool   `ason:"{}[]@\""`
+}
+
 func TestDecodeFieldNamesWithPlusMinus(t *testing.T) {
 	input := []byte("{lowPriorityEIR+CIR,a-b,name}:(42,hello,Alice)")
 	var v PlusMinusFields
@@ -1214,5 +1220,86 @@ func TestDecodeFieldNamesPlusMinusUntyped(t *testing.T) {
 	}
 	if v.LowPriority != "42" {
 		t.Fatalf("LowPriority = %q, want 42", v.LowPriority)
+	}
+}
+
+func TestQuotedSchemaFieldNamesAcrossAPIs(t *testing.T) {
+	v := QuotedSchemaFields{IDUUID: 1, Numeric: "Alice", Special: true}
+
+	text, err := Encode(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(text) != "{\"id uuid\",\"65\",\"{}[]@\\\"\"}:(1,Alice,true)" {
+		t.Fatalf("Encode got %s", text)
+	}
+	var out QuotedSchemaFields
+	if err := Decode(text, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != v {
+		t.Fatalf("Decode mismatch: %#v != %#v", out, v)
+	}
+
+	typed, err := EncodeTyped(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(typed) != "{\"id uuid\"@int,\"65\"@str,\"{}[]@\\\"\"@bool}:(1,Alice,true)" {
+		t.Fatalf("EncodeTyped got %s", typed)
+	}
+	out = QuotedSchemaFields{}
+	if err := Decode(typed, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != v {
+		t.Fatalf("typed Decode mismatch: %#v != %#v", out, v)
+	}
+
+	pretty, err := EncodePretty(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = QuotedSchemaFields{}
+	if err := Decode(pretty, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != v {
+		t.Fatalf("pretty Decode mismatch: %#v != %#v", out, v)
+	}
+
+	prettyTyped, err := EncodePrettyTyped(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = QuotedSchemaFields{}
+	if err := Decode(prettyTyped, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != v {
+		t.Fatalf("pretty typed Decode mismatch: %#v != %#v", out, v)
+	}
+
+	bin, err := EncodeBinary(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out = QuotedSchemaFields{}
+	if err := DecodeBinary(bin, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out != v {
+		t.Fatalf("binary mismatch: %#v != %#v", out, v)
+	}
+}
+
+func TestDecodeQuotedSchemaFieldNames(t *testing.T) {
+	input := []byte("{\"id uuid\"@int,\"65\"@str,\"{}[]@\\\"\"@bool}:(1,Alice,true)")
+	var v QuotedSchemaFields
+	if err := Decode(input, &v); err != nil {
+		t.Fatal(err)
+	}
+	if v.IDUUID != 1 || v.Numeric != "Alice" || !v.Special {
+		t.Fatalf("unexpected decode: %#v", v)
 	}
 }

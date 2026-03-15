@@ -255,6 +255,44 @@ func appendStr(buf []byte, s string) []byte {
 	return append(buf, s...)
 }
 
+func schemaFieldNameNeedsQuoting(s string) bool {
+	if len(s) == 0 {
+		return true
+	}
+	if s == "true" || s == "false" {
+		return true
+	}
+	if s[0] == ' ' || s[len(s)-1] == ' ' {
+		return true
+	}
+	couldBeNumber := true
+	numStart := 0
+	if s[0] == '-' {
+		numStart = 1
+	}
+	if numStart >= len(s) {
+		couldBeNumber = false
+	}
+	for i := 0; i < len(s); i++ {
+		b := s[i]
+		switch b {
+		case ' ', '\t', '\n', '\r', ',', '@', ':', '{', '}', '[', ']', '(', ')', '"', '\\':
+			return true
+		}
+		if couldBeNumber && i >= numStart && !((b >= '0' && b <= '9') || b == '.') {
+			couldBeNumber = false
+		}
+	}
+	return couldBeNumber && len(s) > numStart
+}
+
+func appendSchemaFieldName(buf []byte, s string) []byte {
+	if schemaFieldNameNeedsQuoting(s) {
+		return appendEscaped(buf, s)
+	}
+	return append(buf, s...)
+}
+
 // ---------------------------------------------------------------------------
 // Struct info cache
 // ---------------------------------------------------------------------------
@@ -429,7 +467,7 @@ func (si *structInfo) sliceHeader(typed bool) []byte {
 // Struct and slice-of-struct fields always get nested schema (structural info).
 // Primitive fields only get type annotations in typed mode.
 func appendFieldSchema(buf []byte, fi fieldInfo, typed bool) []byte {
-	buf = append(buf, fi.name...)
+	buf = appendSchemaFieldName(buf, fi.name)
 	buf, _ = appendTypeSchema(buf, fi.fieldType, typed, true)
 	return buf
 }

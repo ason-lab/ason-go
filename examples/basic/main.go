@@ -5,22 +5,22 @@ import (
 	"fmt"
 	"log"
 
-	ason "github.com/ason-lab/ason-go"
+	asun "github.com/asun-lab/asun-go"
 )
 
 type User struct {
-	ID     int64  `ason:"id" json:"id"`
-	Name   string `ason:"name" json:"name"`
-	Active bool   `ason:"active" json:"active"`
+	ID     int64  `asun:"id" json:"id"`
+	Name   string `asun:"name" json:"name"`
+	Active bool   `asun:"active" json:"active"`
 }
 
 func main() {
-	fmt.Println("=== ASON Basic Examples ===")
+	fmt.Println("=== ASUN Basic Examples ===")
 	fmt.Println()
 
 	// 1. Serialize a single struct
 	user := User{ID: 1, Name: "Alice", Active: true}
-	b, err := ason.Encode(&user)
+	b, err := asun.Encode(&user)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -28,17 +28,17 @@ func main() {
 	fmt.Printf("  %s\n\n", b)
 
 	// 2. Serialize with type annotations
-	typed, err := ason.EncodeTyped(&user)
+	typed, err := asun.EncodeTyped(&user)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Serialize with type annotations:")
 	fmt.Printf("  %s\n\n", typed)
 
-	// 3. Deserialize from ASON (accepts both annotated and unannotated)
+	// 3. Deserialize from ASUN (accepts both annotated and unannotated)
 	input := []byte("{id@int,name@str,active@bool}:(1,Alice,true)")
 	var u User
-	if err := ason.Decode(input, &u); err != nil {
+	if err := asun.Decode(input, &u); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Deserialize single struct:")
@@ -50,7 +50,7 @@ func main() {
 		{ID: 2, Name: "Bob", Active: false},
 		{ID: 3, Name: "Carol Smith", Active: true},
 	}
-	vecBytes, err := ason.Encode(users)
+	vecBytes, err := asun.Encode(users)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func main() {
 	fmt.Printf("  %s\n\n", vecBytes)
 
 	// 5. Serialize vec with type annotations
-	typedVec, err := ason.EncodeTyped(users)
+	typedVec, err := asun.EncodeTyped(users)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func main() {
 	// 6. Deserialize vec
 	vecInput := []byte(`[{id@int,name@str,active@bool}]:(1,Alice,true),(2,Bob,false),(3,"Carol Smith",true)`)
 	var parsed []User
-	if err := ason.Decode(vecInput, &parsed); err != nil {
+	if err := asun.Decode(vecInput, &parsed); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Deserialize vec:")
@@ -83,39 +83,39 @@ func main() {
   (2, Bob, false),
   (3, "Carol Smith", true)`)
 	var multi []User
-	if err := ason.Decode(multiline, &multi); err != nil {
+	if err := asun.Decode(multiline, &multi); err != nil {
 		log.Fatal(err)
 	}
 	for _, u := range multi {
 		fmt.Printf("  %+v\n", u)
 	}
 
-	// 8. Roundtrip (ASON-text vs ASON-bin vs JSON)
-	fmt.Println("\n8. Roundtrip (ASON-text vs ASON-bin vs JSON):")
+	// 8. Roundtrip (ASUN-text vs ASUN-bin vs JSON)
+	fmt.Println("\n8. Roundtrip (ASUN-text vs ASUN-bin vs JSON):")
 	original := User{ID: 42, Name: "Test User", Active: true}
-	// ASON text
-	asonText, err := ason.Encode(&original)
+	// ASUN text
+	asunText, err := asun.Encode(&original)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var fromAson User
-	if err := ason.Decode(asonText, &fromAson); err != nil {
+	var fromAsun User
+	if err := asun.Decode(asunText, &fromAsun); err != nil {
 		log.Fatal(err)
 	}
-	if original != fromAson {
-		log.Fatal("ASON text roundtrip mismatch")
+	if original != fromAsun {
+		log.Fatal("ASUN text roundtrip mismatch")
 	}
-	// ASON binary
-	asonBin, err := ason.EncodeBinary(&original)
+	// ASUN binary
+	asunBin, err := asun.EncodeBinary(&original)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var fromBin User
-	if err := ason.DecodeBinary(asonBin, &fromBin); err != nil {
+	if err := asun.DecodeBinary(asunBin, &fromBin); err != nil {
 		log.Fatal(err)
 	}
 	if original != fromBin {
-		log.Fatal("ASON binary roundtrip mismatch")
+		log.Fatal("ASUN binary roundtrip mismatch")
 	}
 	// JSON
 	jsonData, err := json.Marshal(&original)
@@ -130,25 +130,25 @@ func main() {
 		log.Fatal("JSON roundtrip mismatch")
 	}
 	fmt.Printf("  original:     %+v\n", original)
-	fmt.Printf("  ASON text:    %s (%d B)\n", asonText, len(asonText))
-	fmt.Printf("  ASON binary:  %d B\n", len(asonBin))
+	fmt.Printf("  ASUN text:    %s (%d B)\n", asunText, len(asunText))
+	fmt.Printf("  ASUN binary:  %d B\n", len(asunBin))
 	fmt.Printf("  JSON:         %s (%d B)\n", jsonData, len(jsonData))
 	fmt.Println("  ✓ all 3 formats roundtrip OK")
 
 	// 9. Optional fields
 	fmt.Println("\n9. Optional fields:")
 	type Item struct {
-		ID    int64   `ason:"id" json:"id"`
-		Label *string `ason:"label" json:"label"`
+		ID    int64   `asun:"id" json:"id"`
+		Label *string `asun:"label" json:"label"`
 	}
 	var item Item
-	if err := ason.Decode([]byte("{id,label}:(1,hello)"), &item); err != nil {
+	if err := asun.Decode([]byte("{id,label}:(1,hello)"), &item); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("  with value: %+v (label=%s)\n", item, *item.Label)
 
 	var item2 Item
-	if err := ason.Decode([]byte("{id,label}:(2,)"), &item2); err != nil {
+	if err := asun.Decode([]byte("{id,label}:(2,)"), &item2); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("  with null:  %+v\n", item2)
@@ -156,11 +156,11 @@ func main() {
 	// 10. Array fields
 	fmt.Println("\n10. Array fields:")
 	type Tagged struct {
-		Name string   `ason:"name" json:"name"`
-		Tags []string `ason:"tags" json:"tags"`
+		Name string   `asun:"name" json:"name"`
+		Tags []string `asun:"tags" json:"tags"`
 	}
 	var t Tagged
-	if err := ason.Decode([]byte("{name,tags}:(Alice,[rust,go,python])"), &t); err != nil {
+	if err := asun.Decode([]byte("{name,tags}:(Alice,[rust,go,python])"), &t); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("  %+v\n", t)
@@ -168,7 +168,7 @@ func main() {
 	// 11. Comments
 	fmt.Println("\n11. With comments:")
 	var commented User
-	if err := ason.Decode([]byte("/* user list */ {id,name,active}:(1,Alice,true)"), &commented); err != nil {
+	if err := asun.Decode([]byte("/* user list */ {id,name,active}:(1,Alice,true)"), &commented); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("  %+v\n", commented)

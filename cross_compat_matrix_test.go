@@ -1,75 +1,75 @@
-package ason
+package asun
 
 import "testing"
 
 type MatrixPerson struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
 }
 
 type MatrixPersonWithActive struct {
-	ID     int64  `ason:"id"`
-	Name   string `ason:"name"`
-	Active bool   `ason:"active"`
+	ID     int64  `asun:"id"`
+	Name   string `asun:"name"`
+	Active bool   `asun:"active"`
 }
 
 type MatrixInnerThin struct {
-	X int64 `ason:"x"`
-	Y int64 `ason:"y"`
+	X int64 `asun:"x"`
+	Y int64 `asun:"y"`
 }
 
 type MatrixOuterThin struct {
-	Name  string          `ason:"name"`
-	Inner MatrixInnerThin `ason:"inner"`
+	Name  string          `asun:"name"`
+	Inner MatrixInnerThin `asun:"inner"`
 }
 
 type MatrixTaskThin struct {
-	Title string `ason:"title"`
-	Done  bool   `ason:"done"`
+	Title string `asun:"title"`
+	Done  bool   `asun:"done"`
 }
 
 type MatrixProjectThin struct {
-	Name  string           `ason:"name"`
-	Tasks []MatrixTaskThin `ason:"tasks"`
+	Name  string           `asun:"name"`
+	Tasks []MatrixTaskThin `asun:"tasks"`
 }
 
 type MatrixDstFewerOptionals struct {
-	ID    int64   `ason:"id"`
-	Label *string `ason:"label"`
+	ID    int64   `asun:"id"`
+	Label *string `asun:"label"`
 }
 
 type MatrixL3Thin struct {
-	A int64 `ason:"a"`
+	A int64 `asun:"a"`
 }
 
 type MatrixL2Thin struct {
-	Name string       `ason:"name"`
-	Sub  MatrixL3Thin `ason:"sub"`
+	Name string       `asun:"name"`
+	Sub  MatrixL3Thin `asun:"sub"`
 }
 
 type MatrixL1Thin struct {
-	ID    int64        `ason:"id"`
-	Child MatrixL2Thin `ason:"child"`
+	ID    int64        `asun:"id"`
+	Child MatrixL2Thin `asun:"child"`
 }
 
 type MatrixPersonScore struct {
-	ID    int64   `ason:"id"`
-	Score float64 `ason:"score"`
+	ID    int64   `asun:"id"`
+	Score float64 `asun:"score"`
 }
 
 type MatrixNoOverlap struct {
-	Foo int64  `ason:"foo"`
-	Bar string `ason:"bar"`
+	Foo int64  `asun:"foo"`
+	Bar string `asun:"bar"`
 }
 
 type MatrixNestedOptionalThin struct {
-	Name string  `ason:"name"`
-	Nick *string `ason:"nick"`
+	Name string  `asun:"name"`
+	Nick *string `asun:"nick"`
 }
 
 type MatrixUserWithNestedOptional struct {
-	ID      int64                   `ason:"id"`
-	Profile MatrixNestedOptionalThin `ason:"profile"`
+	ID      int64                    `asun:"id"`
+	Profile MatrixNestedOptionalThin `asun:"profile"`
 }
 
 func TestMatrix_A2_TypedSingleExtraFieldDropped(t *testing.T) {

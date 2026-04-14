@@ -1,4 +1,4 @@
-package ason
+package asun
 
 import (
 	"math"
@@ -344,8 +344,8 @@ func buildStructInfo(t reflect.Type) *structInfo {
 		}
 		fi := fieldInfo{index: f.Index, direct: direct, fieldType: f.Type}
 
-		// Check ason tag first, then json tag
-		if tag, ok := f.Tag.Lookup("ason"); ok {
+		// Check asun tag first, then json tag
+		if tag, ok := f.Tag.Lookup("asun"); ok {
 			if tag == "-" {
 				continue
 			}
@@ -555,14 +555,14 @@ func typeHintForKind(k reflect.Kind) string {
 // Public API
 // ---------------------------------------------------------------------------
 
-// Encode serializes a struct or slice of structs to ASON format.
+// Encode serializes a struct or slice of structs to ASUN format.
 // Single struct output: {field1,field2,...}:(val1,val2,...)
 // Slice output: [{field1,field2,...}]:(val1,val2,...),(val3,val4,...)
 func Encode(v any) ([]byte, error) {
 	return encodeInner(v, false)
 }
 
-// EncodeTyped serializes a struct or slice of structs to ASON format with
+// EncodeTyped serializes a struct or slice of structs to ASUN format with
 // `@` type annotations and structural markers.
 // Single: {field1@type1,field2@type2,...}:(val1,val2,...)
 // Slice: [{field1@type1,...}]:(val1,val2,...),(val3,val4,...)
@@ -612,7 +612,7 @@ func encodeInner(v any, typed bool) ([]byte, error) {
 	return result, nil
 }
 
-// encodeSliceInner serializes a slice of structs to ASON format.
+// encodeSliceInner serializes a slice of structs to ASUN format.
 // Output: [{field1,field2,...}]:(v1,v2,...),(v3,v4,...)
 func encodeSliceInner(v any, typed bool) ([]byte, error) {
 	rv := reflect.ValueOf(v)

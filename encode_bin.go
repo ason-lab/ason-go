@@ -1,4 +1,4 @@
-package ason
+package asun
 
 import (
 	"encoding/binary"
@@ -26,7 +26,7 @@ func putBinBuf(bp *[]byte) {
 	}
 }
 
-// EncodeBinary serializes a Go value to ASON-BIN format.
+// EncodeBinary serializes a Go value to ASUN-BIN format.
 func EncodeBinary(v any) ([]byte, error) {
 	if v == nil {
 		return nil, &MarshalError{Message: "cannot marshal nil"}

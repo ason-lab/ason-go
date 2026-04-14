@@ -7,87 +7,87 @@ import (
 	"strings"
 	"time"
 
-	ason "github.com/ason-lab/ason-go"
+	asun "github.com/asun-lab/asun-go"
 )
 
 type User struct {
-	ID     int64   `ason:"id" json:"id"`
-	Name   string  `ason:"name" json:"name"`
-	Email  string  `ason:"email" json:"email"`
-	Age    int64   `ason:"age" json:"age"`
-	Score  float64 `ason:"score" json:"score"`
-	Active bool    `ason:"active" json:"active"`
-	Role   string  `ason:"role" json:"role"`
-	City   string  `ason:"city" json:"city"`
+	ID     int64   `asun:"id" json:"id"`
+	Name   string  `asun:"name" json:"name"`
+	Email  string  `asun:"email" json:"email"`
+	Age    int64   `asun:"age" json:"age"`
+	Score  float64 `asun:"score" json:"score"`
+	Active bool    `asun:"active" json:"active"`
+	Role   string  `asun:"role" json:"role"`
+	City   string  `asun:"city" json:"city"`
 }
 
 type AllTypes struct {
-	B       bool     `ason:"b" json:"b"`
-	I8v     int8     `ason:"i8v" json:"i8v"`
-	I16v    int16    `ason:"i16v" json:"i16v"`
-	I32v    int32    `ason:"i32v" json:"i32v"`
-	I64v    int64    `ason:"i64v" json:"i64v"`
-	U8v     uint8    `ason:"u8v" json:"u8v"`
-	U16v    uint16   `ason:"u16v" json:"u16v"`
-	U32v    uint32   `ason:"u32v" json:"u32v"`
-	U64v    uint64   `ason:"u64v" json:"u64v"`
-	F32v    float32  `ason:"f32v" json:"f32v"`
-	F64v    float64  `ason:"f64v" json:"f64v"`
-	S       string   `ason:"s" json:"s"`
-	OptSome *int64   `ason:"opt_some" json:"opt_some"`
-	OptNone *int64   `ason:"opt_none" json:"opt_none"`
-	VecInt  []int64  `ason:"vec_int" json:"vec_int"`
-	VecStr  []string `ason:"vec_str" json:"vec_str"`
+	B       bool     `asun:"b" json:"b"`
+	I8v     int8     `asun:"i8v" json:"i8v"`
+	I16v    int16    `asun:"i16v" json:"i16v"`
+	I32v    int32    `asun:"i32v" json:"i32v"`
+	I64v    int64    `asun:"i64v" json:"i64v"`
+	U8v     uint8    `asun:"u8v" json:"u8v"`
+	U16v    uint16   `asun:"u16v" json:"u16v"`
+	U32v    uint32   `asun:"u32v" json:"u32v"`
+	U64v    uint64   `asun:"u64v" json:"u64v"`
+	F32v    float32  `asun:"f32v" json:"f32v"`
+	F64v    float64  `asun:"f64v" json:"f64v"`
+	S       string   `asun:"s" json:"s"`
+	OptSome *int64   `asun:"opt_some" json:"opt_some"`
+	OptNone *int64   `asun:"opt_none" json:"opt_none"`
+	VecInt  []int64  `asun:"vec_int" json:"vec_int"`
+	VecStr  []string `asun:"vec_str" json:"vec_str"`
 }
 
 type Task struct {
-	ID       int64   `ason:"id" json:"id"`
-	Title    string  `ason:"title" json:"title"`
-	Priority int64   `ason:"priority" json:"priority"`
-	Done     bool    `ason:"done" json:"done"`
-	Hours    float64 `ason:"hours" json:"hours"`
+	ID       int64   `asun:"id" json:"id"`
+	Title    string  `asun:"title" json:"title"`
+	Priority int64   `asun:"priority" json:"priority"`
+	Done     bool    `asun:"done" json:"done"`
+	Hours    float64 `asun:"hours" json:"hours"`
 }
 
 type Project struct {
-	Name   string  `ason:"name" json:"name"`
-	Budget float64 `ason:"budget" json:"budget"`
-	Active bool    `ason:"active" json:"active"`
-	Tasks  []Task  `ason:"tasks" json:"tasks"`
+	Name   string  `asun:"name" json:"name"`
+	Budget float64 `asun:"budget" json:"budget"`
+	Active bool    `asun:"active" json:"active"`
+	Tasks  []Task  `asun:"tasks" json:"tasks"`
 }
 
 type Team struct {
-	Name     string    `ason:"name" json:"name"`
-	Lead     string    `ason:"lead" json:"lead"`
-	Size     int64     `ason:"size" json:"size"`
-	Projects []Project `ason:"projects" json:"projects"`
+	Name     string    `asun:"name" json:"name"`
+	Lead     string    `asun:"lead" json:"lead"`
+	Size     int64     `asun:"size" json:"size"`
+	Projects []Project `asun:"projects" json:"projects"`
 }
 
 type Division struct {
-	Name      string `ason:"name" json:"name"`
-	Location  string `ason:"location" json:"location"`
-	Headcount int64  `ason:"headcount" json:"headcount"`
-	Teams     []Team `ason:"teams" json:"teams"`
+	Name      string `asun:"name" json:"name"`
+	Location  string `asun:"location" json:"location"`
+	Headcount int64  `asun:"headcount" json:"headcount"`
+	Teams     []Team `asun:"teams" json:"teams"`
 }
 
 type Company struct {
-	Name      string     `ason:"name" json:"name"`
-	Founded   int64      `ason:"founded" json:"founded"`
-	RevenueM  float64    `ason:"revenue_m" json:"revenue_m"`
-	Public    bool       `ason:"public" json:"public"`
-	Divisions []Division `ason:"divisions" json:"divisions"`
-	Tags      []string   `ason:"tags" json:"tags"`
+	Name      string     `asun:"name" json:"name"`
+	Founded   int64      `asun:"founded" json:"founded"`
+	RevenueM  float64    `asun:"revenue_m" json:"revenue_m"`
+	Public    bool       `asun:"public" json:"public"`
+	Divisions []Division `asun:"divisions" json:"divisions"`
+	Tags      []string   `asun:"tags" json:"tags"`
 }
 
 type benchResult struct {
 	name      string
 	jsonSerMs float64
-	asonSerMs float64
+	asunSerMs float64
 	binSerMs  float64
 	jsonDeMs  float64
-	asonDeMs  float64
+	asunDeMs  float64
 	binDeMs   float64
 	jsonBytes int
-	asonBytes int
+	asunBytes int
 	binBytes  int
 }
 
@@ -214,15 +214,15 @@ func formatPercent(part, whole int) string {
 	return s + "%"
 }
 
-func mustAsonEncode(v any, typed bool) []byte {
+func mustAsunEncode(v any, typed bool) []byte {
 	var (
 		b   []byte
 		err error
 	)
 	if typed {
-		b, err = ason.EncodeTyped(v)
+		b, err = asun.EncodeTyped(v)
 	} else {
-		b, err = ason.Encode(v)
+		b, err = asun.Encode(v)
 	}
 	if err != nil {
 		panic(err)
@@ -239,12 +239,12 @@ func printSection(title string, width int) {
 
 func (r benchResult) print() {
 	fmt.Printf("  %s\n", r.name)
-	fmt.Printf("    Serialize:   JSON %.2fms/%dB | ASON %.2fms(%s)/%dB(%s) | BIN %.2fm(%s)/%dB(%s)\n",
+	fmt.Printf("    Serialize:   JSON %.2fms/%dB | ASUN %.2fms(%s)/%dB(%s) | BIN %.2fm(%s)/%dB(%s)\n",
 		r.jsonSerMs, r.jsonBytes,
-		r.asonSerMs, formatRatio(r.jsonSerMs, r.asonSerMs), r.asonBytes, formatPercent(r.asonBytes, r.jsonBytes),
+		r.asunSerMs, formatRatio(r.jsonSerMs, r.asunSerMs), r.asunBytes, formatPercent(r.asunBytes, r.jsonBytes),
 		r.binSerMs, formatRatio(r.jsonSerMs, r.binSerMs), r.binBytes, formatPercent(r.binBytes, r.jsonBytes))
-	fmt.Printf("    Deserialize: JSON %8.2fms | ASON %8.2fms(%s) | BIN %8.2fms(%s)\n",
-		r.jsonDeMs, r.asonDeMs, formatRatio(r.jsonDeMs, r.asonDeMs), r.binDeMs, formatRatio(r.jsonDeMs, r.binDeMs))
+	fmt.Printf("    Deserialize: JSON %8.2fms | ASUN %8.2fms(%s) | BIN %8.2fms(%s)\n",
+		r.jsonDeMs, r.asunDeMs, formatRatio(r.jsonDeMs, r.asunDeMs), r.binDeMs, formatRatio(r.jsonDeMs, r.binDeMs))
 }
 
 func benchFlat(count, iterations int) benchResult {
@@ -257,17 +257,17 @@ func benchFlat(count, iterations int) benchResult {
 	}
 	jsonSer := time.Since(start)
 
-	var asonData []byte
+	var asunData []byte
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
-		asonData, _ = ason.Encode(users)
+		asunData, _ = asun.Encode(users)
 	}
-	asonSer := time.Since(start)
+	asunSer := time.Since(start)
 
 	var binData []byte
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
-		binData, _ = ason.EncodeBinary(users)
+		binData, _ = asun.EncodeBinary(users)
 	}
 	binSer := time.Since(start)
 
@@ -281,35 +281,35 @@ func benchFlat(count, iterations int) benchResult {
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
 		var out []User
-		_ = ason.Decode(asonData, &out)
+		_ = asun.Decode(asunData, &out)
 	}
-	asonDe := time.Since(start)
+	asunDe := time.Since(start)
 
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
 		var out []User
-		_ = ason.DecodeBinary(binData, &out)
+		_ = asun.DecodeBinary(binData, &out)
 	}
 	binDe := time.Since(start)
 
 	var decoded []User
-	if err := ason.Decode(asonData, &decoded); err != nil || len(decoded) != count {
+	if err := asun.Decode(asunData, &decoded); err != nil || len(decoded) != count {
 		panic("flat text roundtrip failed")
 	}
-	if err := ason.DecodeBinary(binData, &decoded); err != nil || len(decoded) != count {
+	if err := asun.DecodeBinary(binData, &decoded); err != nil || len(decoded) != count {
 		panic("flat binary roundtrip failed")
 	}
 
 	return benchResult{
 		name:      fmt.Sprintf("Flat struct × %d (8 fields, vec)", count),
 		jsonSerMs: float64(jsonSer.Nanoseconds()) / 1e6,
-		asonSerMs: float64(asonSer.Nanoseconds()) / 1e6,
+		asunSerMs: float64(asunSer.Nanoseconds()) / 1e6,
 		binSerMs:  float64(binSer.Nanoseconds()) / 1e6,
 		jsonDeMs:  float64(jsonDe.Nanoseconds()) / 1e6,
-		asonDeMs:  float64(asonDe.Nanoseconds()) / 1e6,
+		asunDeMs:  float64(asunDe.Nanoseconds()) / 1e6,
 		binDeMs:   float64(binDe.Nanoseconds()) / 1e6,
 		jsonBytes: len(jsonData),
-		asonBytes: len(asonData),
+		asunBytes: len(asunData),
 		binBytes:  len(binData),
 	}
 }
@@ -324,17 +324,17 @@ func benchAllTypes(count, iterations int) benchResult {
 	}
 	jsonSer := time.Since(start)
 
-	var asonData []byte
+	var asunData []byte
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
-		asonData, _ = ason.Encode(items)
+		asunData, _ = asun.Encode(items)
 	}
-	asonSer := time.Since(start)
+	asunSer := time.Since(start)
 
 	var binData []byte
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
-		binData, _ = ason.EncodeBinary(items)
+		binData, _ = asun.EncodeBinary(items)
 	}
 	binSer := time.Since(start)
 
@@ -348,27 +348,27 @@ func benchAllTypes(count, iterations int) benchResult {
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
 		var out []AllTypes
-		_ = ason.Decode(asonData, &out)
+		_ = asun.Decode(asunData, &out)
 	}
-	asonDe := time.Since(start)
+	asunDe := time.Since(start)
 
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
 		var out []AllTypes
-		_ = ason.DecodeBinary(binData, &out)
+		_ = asun.DecodeBinary(binData, &out)
 	}
 	binDe := time.Since(start)
 
 	return benchResult{
 		name:      fmt.Sprintf("All-types struct × %d (16 fields, vec)", count),
 		jsonSerMs: float64(jsonSer.Nanoseconds()) / 1e6,
-		asonSerMs: float64(asonSer.Nanoseconds()) / 1e6,
+		asunSerMs: float64(asunSer.Nanoseconds()) / 1e6,
 		binSerMs:  float64(binSer.Nanoseconds()) / 1e6,
 		jsonDeMs:  float64(jsonDe.Nanoseconds()) / 1e6,
-		asonDeMs:  float64(asonDe.Nanoseconds()) / 1e6,
+		asunDeMs:  float64(asunDe.Nanoseconds()) / 1e6,
 		binDeMs:   float64(binDe.Nanoseconds()) / 1e6,
 		jsonBytes: len(jsonData),
-		asonBytes: len(asonData),
+		asunBytes: len(asunData),
 		binBytes:  len(binData),
 	}
 }
@@ -383,17 +383,17 @@ func benchDeep(count, iterations int) benchResult {
 	}
 	jsonSer := time.Since(start)
 
-	var asonData []byte
+	var asunData []byte
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
-		asonData, _ = ason.Encode(companies)
+		asunData, _ = asun.Encode(companies)
 	}
-	asonSer := time.Since(start)
+	asunSer := time.Since(start)
 
 	var binData []byte
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
-		binData, _ = ason.EncodeBinary(companies)
+		binData, _ = asun.EncodeBinary(companies)
 	}
 	binSer := time.Since(start)
 
@@ -407,32 +407,32 @@ func benchDeep(count, iterations int) benchResult {
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
 		var out []Company
-		_ = ason.Decode(asonData, &out)
+		_ = asun.Decode(asunData, &out)
 	}
-	asonDe := time.Since(start)
+	asunDe := time.Since(start)
 
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
 		var out []Company
-		_ = ason.DecodeBinary(binData, &out)
+		_ = asun.DecodeBinary(binData, &out)
 	}
 	binDe := time.Since(start)
 
 	return benchResult{
 		name:      fmt.Sprintf("5-level deep × %d (Company>Division>Team>Project>Task)", count),
 		jsonSerMs: float64(jsonSer.Nanoseconds()) / 1e6,
-		asonSerMs: float64(asonSer.Nanoseconds()) / 1e6,
+		asunSerMs: float64(asunSer.Nanoseconds()) / 1e6,
 		binSerMs:  float64(binSer.Nanoseconds()) / 1e6,
 		jsonDeMs:  float64(jsonDe.Nanoseconds()) / 1e6,
-		asonDeMs:  float64(asonDe.Nanoseconds()) / 1e6,
+		asunDeMs:  float64(asunDe.Nanoseconds()) / 1e6,
 		binDeMs:   float64(binDe.Nanoseconds()) / 1e6,
 		jsonBytes: len(jsonData),
-		asonBytes: len(asonData),
+		asunBytes: len(asunData),
 		binBytes:  len(binData),
 	}
 }
 
-func benchSingleRoundtrip(iterations int) (asonMs, jsonMs float64) {
+func benchSingleRoundtrip(iterations int) (asunMs, jsonMs float64) {
 	user := User{
 		ID: 1, Name: "Alice", Email: "alice@example.com", Age: 30,
 		Score: 95.5, Active: true, Role: "engineer", City: "NYC",
@@ -440,11 +440,11 @@ func benchSingleRoundtrip(iterations int) (asonMs, jsonMs float64) {
 
 	start := time.Now()
 	for i := 0; i < iterations; i++ {
-		s, _ := ason.Encode(&user)
+		s, _ := asun.Encode(&user)
 		var out User
-		_ = ason.Decode(s, &out)
+		_ = asun.Decode(s, &out)
 	}
-	asonMs = float64(time.Since(start).Nanoseconds()) / 1e6
+	asunMs = float64(time.Since(start).Nanoseconds()) / 1e6
 
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
@@ -456,16 +456,16 @@ func benchSingleRoundtrip(iterations int) (asonMs, jsonMs float64) {
 	return
 }
 
-func benchDeepSingleRoundtrip(iterations int) (asonMs, jsonMs float64) {
+func benchDeepSingleRoundtrip(iterations int) (asunMs, jsonMs float64) {
 	company := generateCompanies(1)[0]
 
 	start := time.Now()
 	for i := 0; i < iterations; i++ {
-		s, _ := ason.Encode(&company)
+		s, _ := asun.Encode(&company)
 		var out Company
-		_ = ason.Decode(s, &out)
+		_ = asun.Decode(s, &out)
 	}
-	asonMs = float64(time.Since(start).Nanoseconds()) / 1e6
+	asunMs = float64(time.Since(start).Nanoseconds()) / 1e6
 
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
@@ -479,7 +479,7 @@ func benchDeepSingleRoundtrip(iterations int) (asonMs, jsonMs float64) {
 
 func main() {
 	fmt.Println("╔══════════════════════════════════════════════════════════════╗")
-	fmt.Println("║            ASON vs JSON Comprehensive Benchmark              ║")
+	fmt.Println("║            ASUN vs JSON Comprehensive Benchmark              ║")
 	fmt.Println("╚══════════════════════════════════════════════════════════════╝")
 	fmt.Printf("\nSystem: %s %s\n", runtime.GOOS, runtime.GOARCH)
 	fmt.Println("Iterations per test: 100")
@@ -508,10 +508,10 @@ func main() {
 
 	printSection("Section 4: Single Struct Roundtrip (10000x)", 48)
 	fmt.Println()
-	asonFlat, jsonFlat := benchSingleRoundtrip(10000)
-	fmt.Printf("  Flat:  ASON %8.2fms | JSON %8.2fms | ratio %.2fx\n", asonFlat, jsonFlat, jsonFlat/asonFlat)
-	asonDeep, jsonDeep := benchDeepSingleRoundtrip(10000)
-	fmt.Printf("  Deep:  ASON %8.2fms | JSON %8.2fms | ratio %.2fx\n", asonDeep, jsonDeep, jsonDeep/asonDeep)
+	asunFlat, jsonFlat := benchSingleRoundtrip(10000)
+	fmt.Printf("  Flat:  ASUN %8.2fms | JSON %8.2fms | ratio %.2fx\n", asunFlat, jsonFlat, jsonFlat/asunFlat)
+	asunDeep, jsonDeep := benchDeepSingleRoundtrip(10000)
+	fmt.Printf("  Deep:  ASUN %8.2fms | JSON %8.2fms | ratio %.2fx\n", asunDeep, jsonDeep, jsonDeep/asunDeep)
 
 	fmt.Println()
 	printSection("Section 5: Large Payload (10k records)", 48)
@@ -525,21 +525,21 @@ func main() {
 	fmt.Println()
 	{
 		users := generateUsers(1000)
-		untyped := mustAsonEncode(users, false)
-		typed := mustAsonEncode(users, true)
+		untyped := mustAsunEncode(users, false)
+		typed := mustAsunEncode(users, true)
 		deIters := 200
 
 		start := time.Now()
 		for i := 0; i < deIters; i++ {
 			var out []User
-			_ = ason.Decode(untyped, &out)
+			_ = asun.Decode(untyped, &out)
 		}
 		untypedMs := float64(time.Since(start).Nanoseconds()) / 1e6
 
 		start = time.Now()
 		for i := 0; i < deIters; i++ {
 			var out []User
-			_ = ason.Decode(typed, &out)
+			_ = asun.Decode(typed, &out)
 		}
 		typedMs := float64(time.Since(start).Nanoseconds()) / 1e6
 
@@ -559,14 +559,14 @@ func main() {
 		start := time.Now()
 		var untyped []byte
 		for i := 0; i < serIters; i++ {
-			untyped, _ = ason.Encode(users)
+			untyped, _ = asun.Encode(users)
 		}
 		untypedMs := float64(time.Since(start).Nanoseconds()) / 1e6
 
 		start = time.Now()
 		var typed []byte
 		for i := 0; i < serIters; i++ {
-			typed, _ = ason.EncodeTyped(users)
+			typed, _ = asun.EncodeTyped(users)
 		}
 		typedMs := float64(time.Since(start).Nanoseconds()) / 1e6
 
@@ -582,7 +582,7 @@ func main() {
 	{
 		users := generateUsers(1000)
 		jsonData, _ := json.Marshal(users)
-		asonData, _ := ason.Encode(users)
+		asunData, _ := asun.Encode(users)
 		iters := 100
 
 		start := time.Now()
@@ -593,9 +593,9 @@ func main() {
 
 		start = time.Now()
 		for i := 0; i < iters; i++ {
-			_, _ = ason.Encode(users)
+			_, _ = asun.Encode(users)
 		}
-		asonSerDur := time.Since(start).Seconds()
+		asunSerDur := time.Since(start).Seconds()
 
 		start = time.Now()
 		for i := 0; i < iters; i++ {
@@ -607,19 +607,19 @@ func main() {
 		start = time.Now()
 		for i := 0; i < iters; i++ {
 			var out []User
-			_ = ason.Decode(asonData, &out)
+			_ = asun.Decode(asunData, &out)
 		}
-		asonDeDur := time.Since(start).Seconds()
+		asunDeDur := time.Since(start).Seconds()
 
 		totalRecords := 1000.0 * float64(iters)
 		fmt.Printf("  Serialize throughput (1000 records x %d iters):\n", iters)
 		fmt.Printf("    JSON: %.0f records/s\n", totalRecords/jsonSerDur)
-		fmt.Printf("    ASON: %.0f records/s\n", totalRecords/asonSerDur)
-		fmt.Printf("    Speed: %.2fx\n", jsonSerDur/asonSerDur)
+		fmt.Printf("    ASUN: %.0f records/s\n", totalRecords/asunSerDur)
+		fmt.Printf("    Speed: %.2fx\n", jsonSerDur/asunSerDur)
 		fmt.Println("  Deserialize throughput:")
 		fmt.Printf("    JSON: %.0f records/s\n", totalRecords/jsonDeDur)
-		fmt.Printf("    ASON: %.0f records/s\n", totalRecords/asonDeDur)
-		fmt.Printf("    Speed: %.2fx\n", jsonDeDur/asonDeDur)
+		fmt.Printf("    ASUN: %.0f records/s\n", totalRecords/asunDeDur)
+		fmt.Printf("    Speed: %.2fx\n", jsonDeDur/asunDeDur)
 	}
 
 	fmt.Println("\n╔══════════════════════════════════════════════════════════════╗")

@@ -1,4 +1,4 @@
-package ason
+package asun
 
 import (
 	"reflect"
@@ -9,10 +9,10 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Decode — deserialize from ASON
+// Decode — deserialize from ASUN
 // ---------------------------------------------------------------------------
 
-// Decode parses ASON data and stores the result in v.
+// Decode parses ASUN data and stores the result in v.
 // v must be a pointer to a struct or a pointer to a slice of structs.
 // Single struct input:  {field1,field2,...}:(val1,val2,...)
 // Slice input:         [{field1,field2,...}]:(val1,val2,...),(val3,val4,...)

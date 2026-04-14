@@ -1,4 +1,4 @@
-package ason
+package asun
 
 import (
 	"math"
@@ -11,16 +11,16 @@ import (
 // ============================================================================
 
 type FullUser struct {
-	ID     int64   `ason:"id"`
-	Name   string  `ason:"name"`
-	Age    int     `ason:"age"`
-	Active bool    `ason:"active"`
-	Score  float64 `ason:"score"`
+	ID     int64   `asun:"id"`
+	Name   string  `asun:"name"`
+	Age    int     `asun:"age"`
+	Active bool    `asun:"active"`
+	Score  float64 `asun:"score"`
 }
 
 type MiniUser struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
 }
 
 func TestCrossCompat_TrailingFieldsDropped(t *testing.T) {
@@ -68,21 +68,21 @@ func TestCrossCompat_TrailingFieldsSingleStruct(t *testing.T) {
 // ============================================================================
 
 type MetaEntry struct {
-	Key   string `ason:"key"`
-	Value int64  `ason:"value"`
+	Key   string `asun:"key"`
+	Value int64  `asun:"value"`
 }
 
 type RichProfile struct {
-	ID     int64       `ason:"id"`
-	Name   string      `ason:"name"`
-	Tags   []string    `ason:"tags"`
-	Scores []int64     `ason:"scores"`
-	Meta   []MetaEntry `ason:"meta"`
+	ID     int64       `asun:"id"`
+	Name   string      `asun:"name"`
+	Tags   []string    `asun:"tags"`
+	Scores []int64     `asun:"scores"`
+	Meta   []MetaEntry `asun:"meta"`
 }
 
 type ThinProfile struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
 }
 
 func TestCrossCompat_SkipTrailingArrayAndEntryList(t *testing.T) {
@@ -111,26 +111,26 @@ func TestCrossCompat_SkipTrailingArrayAndEntryList(t *testing.T) {
 // ============================================================================
 
 type InnerFull struct {
-	X int64   `ason:"x"`
-	Y int64   `ason:"y"`
-	Z float64 `ason:"z"`
-	W bool    `ason:"w"`
+	X int64   `asun:"x"`
+	Y int64   `asun:"y"`
+	Z float64 `asun:"z"`
+	W bool    `asun:"w"`
 }
 
 type OuterFull struct {
-	Name  string    `ason:"name"`
-	Inner InnerFull `ason:"inner"`
-	Flag  bool      `ason:"flag"`
+	Name  string    `asun:"name"`
+	Inner InnerFull `asun:"inner"`
+	Flag  bool      `asun:"flag"`
 }
 
 type InnerThin struct {
-	X int64 `ason:"x"`
-	Y int64 `ason:"y"`
+	X int64 `asun:"x"`
+	Y int64 `asun:"y"`
 }
 
 type OuterThin struct {
-	Name  string    `ason:"name"`
-	Inner InnerThin `ason:"inner"`
+	Name  string    `asun:"name"`
+	Inner InnerThin `asun:"inner"`
 }
 
 func TestCrossCompat_NestedStructFewerFields(t *testing.T) {
@@ -153,25 +153,25 @@ func TestCrossCompat_NestedStructFewerFields(t *testing.T) {
 // ============================================================================
 
 type TaskFull struct {
-	Title    string  `ason:"title"`
-	Done     bool    `ason:"done"`
-	Priority int64   `ason:"priority"`
-	Weight   float64 `ason:"weight"`
+	Title    string  `asun:"title"`
+	Done     bool    `asun:"done"`
+	Priority int64   `asun:"priority"`
+	Weight   float64 `asun:"weight"`
 }
 
 type ProjectFull struct {
-	Name  string     `ason:"name"`
-	Tasks []TaskFull `ason:"tasks"`
+	Name  string     `asun:"name"`
+	Tasks []TaskFull `asun:"tasks"`
 }
 
 type TaskThin struct {
-	Title string `ason:"title"`
-	Done  bool   `ason:"done"`
+	Title string `asun:"title"`
+	Done  bool   `asun:"done"`
 }
 
 type ProjectThin struct {
-	Name  string     `ason:"name"`
-	Tasks []TaskThin `ason:"tasks"`
+	Name  string     `asun:"name"`
+	Tasks []TaskThin `asun:"tasks"`
 }
 
 func TestCrossCompat_VecNestedStructArraySkipExtra(t *testing.T) {
@@ -220,36 +220,36 @@ func TestCrossCompat_VecNestedStructArraySkipExtra(t *testing.T) {
 // ============================================================================
 
 type L3Full struct {
-	A int64  `ason:"a"`
-	B string `ason:"b"`
-	C bool   `ason:"c"`
+	A int64  `asun:"a"`
+	B string `asun:"b"`
+	C bool   `asun:"c"`
 }
 
 type L2Full struct {
-	Name string   `ason:"name"`
-	Sub  L3Full   `ason:"sub"`
-	Code int64    `ason:"code"`
-	Tags []string `ason:"tags"`
+	Name string   `asun:"name"`
+	Sub  L3Full   `asun:"sub"`
+	Code int64    `asun:"code"`
+	Tags []string `asun:"tags"`
 }
 
 type L1Full struct {
-	ID    int64  `ason:"id"`
-	Child L2Full `ason:"child"`
-	Extra string `ason:"extra"`
+	ID    int64  `asun:"id"`
+	Child L2Full `asun:"child"`
+	Extra string `asun:"extra"`
 }
 
 type L3Thin struct {
-	A int64 `ason:"a"`
+	A int64 `asun:"a"`
 }
 
 type L2Thin struct {
-	Name string `ason:"name"`
-	Sub  L3Thin `ason:"sub"`
+	Name string `asun:"name"`
+	Sub  L3Thin `asun:"sub"`
 }
 
 type L1Thin struct {
-	ID    int64  `ason:"id"`
-	Child L2Thin `ason:"child"`
+	ID    int64  `asun:"id"`
+	Child L2Thin `asun:"child"`
 }
 
 func TestCrossCompat_DeepNesting3Levels(t *testing.T) {
@@ -276,15 +276,15 @@ func TestCrossCompat_DeepNesting3Levels(t *testing.T) {
 // ============================================================================
 
 type OrderABC struct {
-	A int64  `ason:"a"`
-	B string `ason:"b"`
-	C bool   `ason:"c"`
+	A int64  `asun:"a"`
+	B string `asun:"b"`
+	C bool   `asun:"c"`
 }
 
 type OrderCAB struct {
-	C bool   `ason:"c"`
-	A int64  `ason:"a"`
-	B string `ason:"b"`
+	C bool   `asun:"c"`
+	A int64  `asun:"a"`
+	B string `asun:"b"`
 }
 
 func TestCrossCompat_FieldReorder(t *testing.T) {
@@ -308,16 +308,16 @@ func TestCrossCompat_FieldReorder(t *testing.T) {
 // ============================================================================
 
 type BigRecord struct {
-	ID     int64   `ason:"id"`
-	Name   string  `ason:"name"`
-	Score  float64 `ason:"score"`
-	Active bool    `ason:"active"`
-	Level  int64   `ason:"level"`
+	ID     int64   `asun:"id"`
+	Name   string  `asun:"name"`
+	Score  float64 `asun:"score"`
+	Active bool    `asun:"active"`
+	Level  int64   `asun:"level"`
 }
 
 type SmallReordered struct {
-	Score float64 `ason:"score"`
-	ID    int64   `ason:"id"`
+	Score float64 `asun:"score"`
+	ID    int64   `asun:"id"`
 }
 
 func TestCrossCompat_ReorderPlusDropTrailing(t *testing.T) {
@@ -349,15 +349,15 @@ func TestCrossCompat_ReorderPlusDropTrailing(t *testing.T) {
 // ============================================================================
 
 type SrcSmall struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
 }
 
 type DstBig struct {
-	ID      int64   `ason:"id"`
-	Name    string  `ason:"name"`
-	Missing bool    `ason:"missing"`
-	Extra   float64 `ason:"extra"`
+	ID      int64   `asun:"id"`
+	Name    string  `asun:"name"`
+	Missing bool    `asun:"missing"`
+	Extra   float64 `asun:"extra"`
 }
 
 func TestCrossCompat_TargetHasExtraFields(t *testing.T) {
@@ -384,15 +384,15 @@ func TestCrossCompat_TargetHasExtraFields(t *testing.T) {
 // ============================================================================
 
 type SrcWithOptionals struct {
-	ID    int64    `ason:"id"`
-	Label *string  `ason:"label"`
-	Score *float64 `ason:"score"`
-	Flag  bool     `ason:"flag"`
+	ID    int64    `asun:"id"`
+	Label *string  `asun:"label"`
+	Score *float64 `asun:"score"`
+	Flag  bool     `asun:"flag"`
 }
 
 type DstFewerOptionals struct {
-	ID    int64   `ason:"id"`
-	Label *string `ason:"label"`
+	ID    int64   `asun:"id"`
+	Label *string `asun:"label"`
 }
 
 func TestCrossCompat_OptionalFieldsSkipTrailing(t *testing.T) {
@@ -432,13 +432,13 @@ func TestCrossCompat_OptionalNilSkipTrailing(t *testing.T) {
 // ============================================================================
 
 type SrcSpecialStr struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
-	Bio  string `ason:"bio"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
+	Bio  string `asun:"bio"`
 }
 
 type DstNoStr struct {
-	ID int64 `ason:"id"`
+	ID int64 `asun:"id"`
 }
 
 func TestCrossCompat_SkipQuotedStringWithSpecialChars(t *testing.T) {
@@ -461,13 +461,13 @@ func TestCrossCompat_SkipQuotedStringWithSpecialChars(t *testing.T) {
 // ============================================================================
 
 type SrcNestedArray struct {
-	ID     int64    `ason:"id"`
-	Matrix []int64  `ason:"matrix"`
-	Tags   []string `ason:"tags"`
+	ID     int64    `asun:"id"`
+	Matrix []int64  `asun:"matrix"`
+	Tags   []string `asun:"tags"`
 }
 
 type DstNestedArrayThin struct {
-	ID int64 `ason:"id"`
+	ID int64 `asun:"id"`
 }
 
 func TestCrossCompat_SkipTrailingArrayFields(t *testing.T) {
@@ -493,15 +493,15 @@ func TestCrossCompat_SkipTrailingArrayFields(t *testing.T) {
 // ============================================================================
 
 type SrcNarrow struct {
-	ID    int32  `ason:"id"`
-	Score int32  `ason:"score"`
-	Name  string `ason:"name"`
+	ID    int32  `asun:"id"`
+	Score int32  `asun:"score"`
+	Name  string `asun:"name"`
 }
 
 type DstWide struct {
-	ID    int64  `ason:"id"`
-	Score int64  `ason:"score"`
-	Name  string `ason:"name"`
+	ID    int64  `asun:"id"`
+	Score int64  `asun:"score"`
+	Name  string `asun:"name"`
 }
 
 func TestCrossCompat_IntWidening(t *testing.T) {
@@ -525,13 +525,13 @@ func TestCrossCompat_IntWidening(t *testing.T) {
 // ============================================================================
 
 type SrcFloats struct {
-	ID    int64   `ason:"id"`
-	Value float64 `ason:"value"`
+	ID    int64   `asun:"id"`
+	Value float64 `asun:"value"`
 }
 
 type DstFloats struct {
-	ID    int64   `ason:"id"`
-	Value float64 `ason:"value"`
+	ID    int64   `asun:"id"`
+	Value float64 `asun:"value"`
 }
 
 func TestCrossCompat_FloatRoundtrip(t *testing.T) {
@@ -554,15 +554,15 @@ func TestCrossCompat_FloatRoundtrip(t *testing.T) {
 // ============================================================================
 
 type SrcNegative struct {
-	A int64   `ason:"a"`
-	B int64   `ason:"b"`
-	C float64 `ason:"c"`
-	D string  `ason:"d"`
+	A int64   `asun:"a"`
+	B int64   `asun:"b"`
+	C float64 `asun:"c"`
+	D string  `asun:"d"`
 }
 
 type DstNegativeThin struct {
-	A int64 `ason:"a"`
-	B int64 `ason:"b"`
+	A int64 `asun:"a"`
+	B int64 `asun:"b"`
 }
 
 func TestCrossCompat_NegativeNumbersSkipTrailing(t *testing.T) {
@@ -585,13 +585,13 @@ func TestCrossCompat_NegativeNumbersSkipTrailing(t *testing.T) {
 // ============================================================================
 
 type SrcEmpty struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
-	Bio  string `ason:"bio"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
+	Bio  string `asun:"bio"`
 }
 
 type DstEmptyThin struct {
-	ID int64 `ason:"id"`
+	ID int64 `asun:"id"`
 }
 
 func TestCrossCompat_EmptyStringFields(t *testing.T) {
@@ -614,14 +614,14 @@ func TestCrossCompat_EmptyStringFields(t *testing.T) {
 // ============================================================================
 
 type SrcWithEntries struct {
-	ID   int64       `ason:"id"`
-	Name string      `ason:"name"`
-	Meta []MetaEntry `ason:"meta"`
+	ID   int64       `asun:"id"`
+	Name string      `asun:"name"`
+	Meta []MetaEntry `asun:"meta"`
 }
 
 type DstNoEntries struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
 }
 
 func TestCrossCompat_SkipTrailingEntryListField(t *testing.T) {
@@ -688,25 +688,25 @@ func TestCrossCompat_TypedSchemaSingleDecode(t *testing.T) {
 // ============================================================================
 
 type DetailFull struct {
-	ID     int64  `ason:"id"`
-	Name   string `ason:"name"`
-	Age    int    `ason:"age"`
-	Gender bool   `ason:"gender"`
+	ID     int64  `asun:"id"`
+	Name   string `asun:"name"`
+	Age    int    `asun:"age"`
+	Gender bool   `asun:"gender"`
 }
 
 type UserFull struct {
-	Details []DetailFull `ason:"details"`
-	Code    int64        `ason:"code"`
-	Label   string       `ason:"label"`
+	Details []DetailFull `asun:"details"`
+	Code    int64        `asun:"code"`
+	Label   string       `asun:"label"`
 }
 
 type PersonThin struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
 }
 
 type HumanThin struct {
-	Details []PersonThin `ason:"details"`
+	Details []PersonThin `asun:"details"`
 }
 
 func TestCrossCompat_NestedVecStructPlusTrailingOuterFields(t *testing.T) {
@@ -747,14 +747,14 @@ func TestCrossCompat_NestedVecStructPlusTrailingOuterFields(t *testing.T) {
 // ============================================================================
 
 type SrcBools struct {
-	ID int64 `ason:"id"`
-	A  bool  `ason:"a"`
-	B  bool  `ason:"b"`
-	C  bool  `ason:"c"`
+	ID int64 `asun:"id"`
+	A  bool  `asun:"a"`
+	B  bool  `asun:"b"`
+	C  bool  `asun:"c"`
 }
 
 type DstBoolsThin struct {
-	ID int64 `ason:"id"`
+	ID int64 `asun:"id"`
 }
 
 func TestCrossCompat_SkipTrailingBools(t *testing.T) {
@@ -780,15 +780,15 @@ func TestCrossCompat_SkipTrailingBools(t *testing.T) {
 // ============================================================================
 
 type SrcFiveFields struct {
-	A int64   `ason:"a"`
-	B string  `ason:"b"`
-	C float64 `ason:"c"`
-	D bool    `ason:"d"`
-	E int64   `ason:"e"`
+	A int64   `asun:"a"`
+	B string  `asun:"b"`
+	C float64 `asun:"c"`
+	D bool    `asun:"d"`
+	E int64   `asun:"e"`
 }
 
 type DstMiddleOnly struct {
-	C float64 `ason:"c"`
+	C float64 `asun:"c"`
 }
 
 func TestCrossCompat_PickMiddleFieldOnly(t *testing.T) {
@@ -811,7 +811,7 @@ func TestCrossCompat_PickMiddleFieldOnly(t *testing.T) {
 // ============================================================================
 
 type DstLastOnly struct {
-	E int64 `ason:"e"`
+	E int64 `asun:"e"`
 }
 
 func TestCrossCompat_PickLastFieldOnly(t *testing.T) {
@@ -834,13 +834,13 @@ func TestCrossCompat_PickLastFieldOnly(t *testing.T) {
 // ============================================================================
 
 type SrcAlpha struct {
-	X int64  `ason:"x"`
-	Y string `ason:"y"`
+	X int64  `asun:"x"`
+	Y string `asun:"y"`
 }
 
 type DstBeta struct {
-	P int64  `ason:"p"`
-	Q string `ason:"q"`
+	P int64  `asun:"p"`
+	Q string `asun:"q"`
 }
 
 func TestCrossCompat_NoOverlappingFields(t *testing.T) {
@@ -864,26 +864,26 @@ func TestCrossCompat_NoOverlappingFields(t *testing.T) {
 // ============================================================================
 
 type WorkerFull struct {
-	Name    string   `ason:"name"`
-	Skills  []string `ason:"skills"`
-	YearsXP int64    `ason:"years_xp"`
-	Rating  float64  `ason:"rating"`
+	Name    string   `asun:"name"`
+	Skills  []string `asun:"skills"`
+	YearsXP int64    `asun:"years_xp"`
+	Rating  float64  `asun:"rating"`
 }
 
 type TeamFull struct {
-	Lead    string       `ason:"lead"`
-	Workers []WorkerFull `ason:"workers"`
-	Budget  float64      `ason:"budget"`
+	Lead    string       `asun:"lead"`
+	Workers []WorkerFull `asun:"workers"`
+	Budget  float64      `asun:"budget"`
 }
 
 type WorkerThin struct {
-	Name   string   `ason:"name"`
-	Skills []string `ason:"skills"`
+	Name   string   `asun:"name"`
+	Skills []string `asun:"skills"`
 }
 
 type TeamThin struct {
-	Lead    string       `ason:"lead"`
-	Workers []WorkerThin `ason:"workers"`
+	Lead    string       `asun:"lead"`
+	Workers []WorkerThin `asun:"workers"`
 }
 
 func TestCrossCompat_NestedArrayOfStructsWithExtraFields(t *testing.T) {
@@ -920,17 +920,17 @@ func TestCrossCompat_NestedArrayOfStructsWithExtraFields(t *testing.T) {
 // ============================================================================
 
 type SrcTyped struct {
-	A int64   `ason:"a"`
-	B string  `ason:"b"`
-	C float64 `ason:"c"`
-	D bool    `ason:"d"`
+	A int64   `asun:"a"`
+	B string  `asun:"b"`
+	C float64 `asun:"c"`
+	D bool    `asun:"d"`
 }
 
 type DstMixed struct {
-	B     string  `ason:"b"`
-	D     bool    `ason:"d"`
-	Extra int64   `ason:"extra"`
-	More  float64 `ason:"more"`
+	B     string  `asun:"b"`
+	D     bool    `asun:"d"`
+	Extra int64   `asun:"extra"`
+	More  float64 `asun:"more"`
 }
 
 func TestCrossCompat_TypedSchemaMixedFields(t *testing.T) {
@@ -956,20 +956,20 @@ func TestCrossCompat_TypedSchemaMixedFields(t *testing.T) {
 // ============================================================================
 
 type SrcWide struct {
-	F1  int64  `ason:"f1"`
-	F2  string `ason:"f2"`
-	F3  bool   `ason:"f3"`
-	F4  int64  `ason:"f4"`
-	F5  string `ason:"f5"`
-	F6  bool   `ason:"f6"`
-	F7  int64  `ason:"f7"`
-	F8  string `ason:"f8"`
-	F9  bool   `ason:"f9"`
-	F10 int64  `ason:"f10"`
+	F1  int64  `asun:"f1"`
+	F2  string `asun:"f2"`
+	F3  bool   `asun:"f3"`
+	F4  int64  `asun:"f4"`
+	F5  string `asun:"f5"`
+	F6  bool   `asun:"f6"`
+	F7  int64  `asun:"f7"`
+	F8  string `asun:"f8"`
+	F9  bool   `asun:"f9"`
+	F10 int64  `asun:"f10"`
 }
 
 type DstNarrow struct {
-	F1 int64 `ason:"f1"`
+	F1 int64 `asun:"f1"`
 }
 
 func TestCrossCompat_ManyTrailingFields(t *testing.T) {
@@ -1007,21 +1007,21 @@ func TestCrossCompat_VecSingleRow(t *testing.T) {
 }
 
 // ============================================================================
-// Dimension 28: Encoded string that contains ASON-like syntax
+// Dimension 28: Encoded string that contains ASUN-like syntax
 // ============================================================================
 
-type SrcAsonLike struct {
-	ID   int64  `ason:"id"`
-	Data string `ason:"data"`
-	Code string `ason:"code"`
+type SrcAsunLike struct {
+	ID   int64  `asun:"id"`
+	Data string `asun:"data"`
+	Code string `asun:"code"`
 }
 
-type DstAsonLikeThin struct {
-	ID int64 `ason:"id"`
+type DstAsunLikeThin struct {
+	ID int64 `asun:"id"`
 }
 
-func TestCrossCompat_SkipStringContainingAsonSyntax(t *testing.T) {
-	src := SrcAsonLike{
+func TestCrossCompat_SkipStringContainingAsunSyntax(t *testing.T) {
+	src := SrcAsunLike{
 		ID:   1,
 		Data: `{a,b}:(1,2)`,
 		Code: `<x:y,z:w>`,
@@ -1030,7 +1030,7 @@ func TestCrossCompat_SkipStringContainingAsonSyntax(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var dst DstAsonLikeThin
+	var dst DstAsunLikeThin
 	if err := Decode(data, &dst); err != nil {
 		t.Fatal(err)
 	}
@@ -1044,13 +1044,13 @@ func TestCrossCompat_SkipStringContainingAsonSyntax(t *testing.T) {
 // ============================================================================
 
 type SrcUnicode struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
-	Bio  string `ason:"bio"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
+	Bio  string `asun:"bio"`
 }
 
 type DstUnicodeThin struct {
-	ID int64 `ason:"id"`
+	ID int64 `asun:"id"`
 }
 
 func TestCrossCompat_SkipUnicodeInTrailing(t *testing.T) {
@@ -1073,14 +1073,14 @@ func TestCrossCompat_SkipUnicodeInTrailing(t *testing.T) {
 // ============================================================================
 
 type VersionA struct {
-	ID     int64  `ason:"id"`
-	Name   string `ason:"name"`
-	Active bool   `ason:"active"`
+	ID     int64  `asun:"id"`
+	Name   string `asun:"name"`
+	Active bool   `asun:"active"`
 }
 
 type VersionB struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
 }
 
 func TestCrossCompat_RoundtripABBA(t *testing.T) {
@@ -1117,14 +1117,14 @@ func TestCrossCompat_RoundtripABBA(t *testing.T) {
 // ============================================================================
 
 type SrcWithArr struct {
-	ID    int64    `ason:"id"`
-	Items []string `ason:"items"`
-	Score int64    `ason:"score"`
+	ID    int64    `asun:"id"`
+	Items []string `asun:"items"`
+	Score int64    `asun:"score"`
 }
 
 type DstWithArrThin struct {
-	ID    int64    `ason:"id"`
-	Items []string `ason:"items"`
+	ID    int64    `asun:"id"`
+	Items []string `asun:"items"`
 }
 
 func TestCrossCompat_EmptyArrayInMiddleField(t *testing.T) {
@@ -1160,27 +1160,27 @@ func TestCrossCompat_EmptyArrayInMiddleField(t *testing.T) {
 // ============================================================================
 
 type SrcWithNested struct {
-	ID    int64 `ason:"id"`
+	ID    int64 `asun:"id"`
 	Inner struct {
-		A int64  `ason:"a"`
-		B string `ason:"b"`
-	} `ason:"inner"`
-	Tail string `ason:"tail"`
+		A int64  `asun:"a"`
+		B string `asun:"b"`
+	} `asun:"inner"`
+	Tail string `asun:"tail"`
 }
 
 type DstFlat struct {
-	ID int64 `ason:"id"`
+	ID int64 `asun:"id"`
 }
 
 func TestCrossCompat_SkipNestedStructAsTuple(t *testing.T) {
 	type Inner struct {
-		A int64  `ason:"a"`
-		B string `ason:"b"`
+		A int64  `asun:"a"`
+		B string `asun:"b"`
 	}
 	type Src struct {
-		ID    int64  `ason:"id"`
-		Inner Inner  `ason:"inner"`
-		Tail  string `ason:"tail"`
+		ID    int64  `asun:"id"`
+		Inner Inner  `asun:"inner"`
+		Tail  string `asun:"tail"`
 	}
 	src := Src{ID: 1, Inner: Inner{A: 10, B: "nested"}, Tail: "end"}
 	data, err := Encode(src)

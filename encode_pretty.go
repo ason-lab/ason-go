@@ -1,7 +1,7 @@
-package ason
+package asun
 
 // ---------------------------------------------------------------------------
-// Pretty-print encoder — smart indentation for ASON output
+// Pretty-print encoder — smart indentation for ASUN output
 // ---------------------------------------------------------------------------
 //
 // Simple structures stay inline:
@@ -24,7 +24,7 @@ package ason
 
 const prettyMaxWidth = 100
 
-// EncodePretty serializes a struct or slice of structs to pretty-formatted ASON.
+// EncodePretty serializes a struct or slice of structs to pretty-formatted ASUN.
 func EncodePretty(v any) ([]byte, error) {
 	compact, err := Encode(v)
 	if err != nil {
@@ -42,7 +42,7 @@ func EncodePrettyTyped(v any) ([]byte, error) {
 	return PrettyFormat(compact), nil
 }
 
-// PrettyFormat reformats compact ASON bytes with smart indentation.
+// PrettyFormat reformats compact ASUN bytes with smart indentation.
 // Simple structures stay inline; complex ones expand with 2-space indentation.
 func PrettyFormat(src []byte) []byte {
 	n := len(src)
@@ -101,7 +101,7 @@ func buildMatchTable(src []byte) []int {
 	return match
 }
 
-// writeTop handles the top-level ASON structure
+// writeTop handles the top-level ASUN structure
 func (f *prettyFmt) writeTop() {
 	if f.pos >= len(f.src) {
 		return

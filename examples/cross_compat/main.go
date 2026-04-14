@@ -3,11 +3,11 @@ package main
 import (
 	"fmt"
 
-	"github.com/ason-lab/ason-go"
+	"github.com/asun-lab/asun-go"
 )
 
 type User struct {
-	Details []Detail `ason:"details" json:"details"`
+	Details []Detail `asun:"details" json:"details"`
 }
 
 type Detail struct {
@@ -18,7 +18,7 @@ type Detail struct {
 }
 
 type Human struct {
-	Details []Person `ason:"details" json:"persons"`
+	Details []Person `asun:"details" json:"persons"`
 }
 type Person struct {
 	ID   int64
@@ -28,13 +28,13 @@ type Person struct {
 
 func main() {
 	users := []User{{Details: []Detail{{ID: 1, Name: "Alice", Age: 30, Gender: true}, {ID: 2, Name: "Bob", Age: 25, Gender: false}}}}
-	buf, err := ason.Encode(users)
+	buf, err := asun.Encode(users)
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(string(buf))
 	var decoded []Human
-	if err := ason.Decode(buf, &decoded); err != nil {
+	if err := asun.Decode(buf, &decoded); err != nil {
 		panic(err)
 	}
 	fmt.Printf("%+v\n", decoded)

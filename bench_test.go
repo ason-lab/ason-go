@@ -1,4 +1,4 @@
-package ason
+package asun
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// cd /home/X/dev/ason/ason-go
+// cd /home/X/dev/asun/asun-go
 // go test -run '^$' -bench 'BenchmarkCompareFlat8' -benchmem
 // go test -run '^$' -bench 'BenchmarkCompareAllTypes' -benchmem
 // go test -run '^$' -bench 'BenchmarkCompareDeep' -benchmem
@@ -28,14 +28,14 @@ var (
 	benchFlatVec1000Typed   = []byte(makeFlatUserVecText(1000, true))
 	benchFlatVec1000JSON    = []byte(makeFlatUserVecJSON(1000))
 	benchFlatStructJSONOut  = mustJSONMarshal(benchFlatUser)
-	benchFlatStructASONOut  = mustAsonEncode(benchFlatUser, false)
-	benchFlatStructATypOut  = mustAsonEncode(benchFlatUser, true)
+	benchFlatStructASUNOut  = mustAsunEncode(benchFlatUser, false)
+	benchFlatStructATypOut  = mustAsunEncode(benchFlatUser, true)
 	benchFlatVec100JSONOut  = mustJSONMarshal(benchFlatUsers100)
-	benchFlatVec100ASONOut  = mustAsonEncode(benchFlatUsers100, false)
-	benchFlatVec100ATypOut  = mustAsonEncode(benchFlatUsers100, true)
+	benchFlatVec100ASUNOut  = mustAsunEncode(benchFlatUsers100, false)
+	benchFlatVec100ATypOut  = mustAsunEncode(benchFlatUsers100, true)
 	benchFlatVec1000JSONOut = mustJSONMarshal(benchFlatUsers1000)
-	benchFlatVec1000ASONOut = mustAsonEncode(benchFlatUsers1000, false)
-	benchFlatVec1000ATypOut = mustAsonEncode(benchFlatUsers1000, true)
+	benchFlatVec1000ASUNOut = mustAsunEncode(benchFlatUsers1000, false)
+	benchFlatVec1000ATypOut = mustAsunEncode(benchFlatUsers1000, true)
 )
 
 func makeFlatUsers(n int) []User {
@@ -58,7 +58,7 @@ func mustJSONMarshal(v any) []byte {
 	return b
 }
 
-func mustAsonEncode(v any, typed bool) []byte {
+func mustAsunEncode(v any, typed bool) []byte {
 	var (
 		b   []byte
 		err error
@@ -253,7 +253,7 @@ func BenchmarkEncodeFlatStruct(b *testing.B) {
 
 	b.Run("Untyped", func(b *testing.B) {
 		b.ReportAllocs()
-		b.SetBytes(int64(len(benchFlatStructASONOut)))
+		b.SetBytes(int64(len(benchFlatStructASUNOut)))
 		for i := 0; i < b.N; i++ {
 			if _, err := Encode(benchFlatUser); err != nil {
 				b.Fatal(err)
@@ -285,7 +285,7 @@ func BenchmarkEncodeFlatVec100(b *testing.B) {
 
 	b.Run("Untyped", func(b *testing.B) {
 		b.ReportAllocs()
-		b.SetBytes(int64(len(benchFlatVec100ASONOut)))
+		b.SetBytes(int64(len(benchFlatVec100ASUNOut)))
 		for i := 0; i < b.N; i++ {
 			if _, err := Encode(benchFlatUsers100); err != nil {
 				b.Fatal(err)
@@ -317,7 +317,7 @@ func BenchmarkEncodeFlatVec1000(b *testing.B) {
 
 	b.Run("Untyped", func(b *testing.B) {
 		b.ReportAllocs()
-		b.SetBytes(int64(len(benchFlatVec1000ASONOut)))
+		b.SetBytes(int64(len(benchFlatVec1000ASUNOut)))
 		for i := 0; i < b.N; i++ {
 			if _, err := Encode(benchFlatUsers1000); err != nil {
 				b.Fatal(err)
@@ -337,71 +337,71 @@ func BenchmarkEncodeFlatVec1000(b *testing.B) {
 }
 
 type BenchUser8 struct {
-	ID     int64   `ason:"id" json:"id"`
-	Name   string  `ason:"name" json:"name"`
-	Email  string  `ason:"email" json:"email"`
-	Age    int64   `ason:"age" json:"age"`
-	Score  float64 `ason:"score" json:"score"`
-	Active bool    `ason:"active" json:"active"`
-	Role   string  `ason:"role" json:"role"`
-	City   string  `ason:"city" json:"city"`
+	ID     int64   `asun:"id" json:"id"`
+	Name   string  `asun:"name" json:"name"`
+	Email  string  `asun:"email" json:"email"`
+	Age    int64   `asun:"age" json:"age"`
+	Score  float64 `asun:"score" json:"score"`
+	Active bool    `asun:"active" json:"active"`
+	Role   string  `asun:"role" json:"role"`
+	City   string  `asun:"city" json:"city"`
 }
 
 type BenchAllTypes struct {
-	B       bool     `ason:"b" json:"b"`
-	I8v     int8     `ason:"i8v" json:"i8v"`
-	I16v    int16    `ason:"i16v" json:"i16v"`
-	I32v    int32    `ason:"i32v" json:"i32v"`
-	I64v    int64    `ason:"i64v" json:"i64v"`
-	U8v     uint8    `ason:"u8v" json:"u8v"`
-	U16v    uint16   `ason:"u16v" json:"u16v"`
-	U32v    uint32   `ason:"u32v" json:"u32v"`
-	U64v    uint64   `ason:"u64v" json:"u64v"`
-	F32v    float32  `ason:"f32v" json:"f32v"`
-	F64v    float64  `ason:"f64v" json:"f64v"`
-	S       string   `ason:"s" json:"s"`
-	OptSome *int64   `ason:"opt_some" json:"opt_some"`
-	OptNone *int64   `ason:"opt_none" json:"opt_none"`
-	VecInt  []int64  `ason:"vec_int" json:"vec_int"`
-	VecStr  []string `ason:"vec_str" json:"vec_str"`
+	B       bool     `asun:"b" json:"b"`
+	I8v     int8     `asun:"i8v" json:"i8v"`
+	I16v    int16    `asun:"i16v" json:"i16v"`
+	I32v    int32    `asun:"i32v" json:"i32v"`
+	I64v    int64    `asun:"i64v" json:"i64v"`
+	U8v     uint8    `asun:"u8v" json:"u8v"`
+	U16v    uint16   `asun:"u16v" json:"u16v"`
+	U32v    uint32   `asun:"u32v" json:"u32v"`
+	U64v    uint64   `asun:"u64v" json:"u64v"`
+	F32v    float32  `asun:"f32v" json:"f32v"`
+	F64v    float64  `asun:"f64v" json:"f64v"`
+	S       string   `asun:"s" json:"s"`
+	OptSome *int64   `asun:"opt_some" json:"opt_some"`
+	OptNone *int64   `asun:"opt_none" json:"opt_none"`
+	VecInt  []int64  `asun:"vec_int" json:"vec_int"`
+	VecStr  []string `asun:"vec_str" json:"vec_str"`
 }
 
 type BenchTask struct {
-	ID       int64   `ason:"id" json:"id"`
-	Title    string  `ason:"title" json:"title"`
-	Priority int64   `ason:"priority" json:"priority"`
-	Done     bool    `ason:"done" json:"done"`
-	Hours    float64 `ason:"hours" json:"hours"`
+	ID       int64   `asun:"id" json:"id"`
+	Title    string  `asun:"title" json:"title"`
+	Priority int64   `asun:"priority" json:"priority"`
+	Done     bool    `asun:"done" json:"done"`
+	Hours    float64 `asun:"hours" json:"hours"`
 }
 
 type BenchProject struct {
-	Name   string      `ason:"name" json:"name"`
-	Budget float64     `ason:"budget" json:"budget"`
-	Active bool        `ason:"active" json:"active"`
-	Tasks  []BenchTask `ason:"tasks" json:"tasks"`
+	Name   string      `asun:"name" json:"name"`
+	Budget float64     `asun:"budget" json:"budget"`
+	Active bool        `asun:"active" json:"active"`
+	Tasks  []BenchTask `asun:"tasks" json:"tasks"`
 }
 
 type BenchTeam struct {
-	Name     string         `ason:"name" json:"name"`
-	Lead     string         `ason:"lead" json:"lead"`
-	Size     int64          `ason:"size" json:"size"`
-	Projects []BenchProject `ason:"projects" json:"projects"`
+	Name     string         `asun:"name" json:"name"`
+	Lead     string         `asun:"lead" json:"lead"`
+	Size     int64          `asun:"size" json:"size"`
+	Projects []BenchProject `asun:"projects" json:"projects"`
 }
 
 type BenchDivision struct {
-	Name      string      `ason:"name" json:"name"`
-	Location  string      `ason:"location" json:"location"`
-	Headcount int64       `ason:"headcount" json:"headcount"`
-	Teams     []BenchTeam `ason:"teams" json:"teams"`
+	Name      string      `asun:"name" json:"name"`
+	Location  string      `asun:"location" json:"location"`
+	Headcount int64       `asun:"headcount" json:"headcount"`
+	Teams     []BenchTeam `asun:"teams" json:"teams"`
 }
 
 type BenchCompany struct {
-	Name      string          `ason:"name" json:"name"`
-	Founded   int64           `ason:"founded" json:"founded"`
-	RevenueM  float64         `ason:"revenue_m" json:"revenue_m"`
-	Public    bool            `ason:"public" json:"public"`
-	Divisions []BenchDivision `ason:"divisions" json:"divisions"`
-	Tags      []string        `ason:"tags" json:"tags"`
+	Name      string          `asun:"name" json:"name"`
+	Founded   int64           `asun:"founded" json:"founded"`
+	RevenueM  float64         `asun:"revenue_m" json:"revenue_m"`
+	Public    bool            `asun:"public" json:"public"`
+	Divisions []BenchDivision `asun:"divisions" json:"divisions"`
+	Tags      []string        `asun:"tags" json:"tags"`
 }
 
 func benchI64Ptr(v int64) *int64 { return &v }
@@ -489,7 +489,7 @@ func generateBenchCompanies(n int) []BenchCompany {
 	return companies
 }
 
-func benchmarkCompare[T any](b *testing.B, jsonData []byte, asonUntyped []byte, asonTyped []byte, encodeValue T) {
+func benchmarkCompare[T any](b *testing.B, jsonData []byte, asunUntyped []byte, asunTyped []byte, encodeValue T) {
 	b.Run("EncodeJSON", func(b *testing.B) {
 		b.ReportAllocs()
 		b.SetBytes(int64(len(jsonData)))
@@ -499,18 +499,18 @@ func benchmarkCompare[T any](b *testing.B, jsonData []byte, asonUntyped []byte, 
 			}
 		}
 	})
-	b.Run("EncodeASON", func(b *testing.B) {
+	b.Run("EncodeASUN", func(b *testing.B) {
 		b.ReportAllocs()
-		b.SetBytes(int64(len(asonUntyped)))
+		b.SetBytes(int64(len(asunUntyped)))
 		for i := 0; i < b.N; i++ {
 			if _, err := Encode(encodeValue); err != nil {
 				b.Fatal(err)
 			}
 		}
 	})
-	b.Run("EncodeASONTyped", func(b *testing.B) {
+	b.Run("EncodeASUNTyped", func(b *testing.B) {
 		b.ReportAllocs()
-		b.SetBytes(int64(len(asonTyped)))
+		b.SetBytes(int64(len(asunTyped)))
 		for i := 0; i < b.N; i++ {
 			if _, err := EncodeTyped(encodeValue); err != nil {
 				b.Fatal(err)
@@ -523,11 +523,11 @@ func BenchmarkCompareFlat8(b *testing.B) {
 	for _, n := range []int{100, 500, 1000, 5000, 10000} {
 		users := generateBenchUsers(n)
 		jsonData := mustJSONMarshal(users)
-		asonUntyped := mustAsonEncode(users, false)
-		asonTyped := mustAsonEncode(users, true)
+		asunUntyped := mustAsunEncode(users, false)
+		asunTyped := mustAsunEncode(users, true)
 
 		b.Run(fmt.Sprintf("Count=%d", n), func(b *testing.B) {
-			benchmarkCompare(b, jsonData, asonUntyped, asonTyped, users)
+			benchmarkCompare(b, jsonData, asunUntyped, asunTyped, users)
 
 			b.Run("DecodeJSON", func(b *testing.B) {
 				var out []BenchUser8
@@ -540,24 +540,24 @@ func BenchmarkCompareFlat8(b *testing.B) {
 					}
 				}
 			})
-			b.Run("DecodeASON", func(b *testing.B) {
+			b.Run("DecodeASUN", func(b *testing.B) {
 				var out []BenchUser8
 				b.ReportAllocs()
-				b.SetBytes(int64(len(asonUntyped)))
+				b.SetBytes(int64(len(asunUntyped)))
 				for i := 0; i < b.N; i++ {
 					out = nil
-					if err := Decode(asonUntyped, &out); err != nil {
+					if err := Decode(asunUntyped, &out); err != nil {
 						b.Fatal(err)
 					}
 				}
 			})
-			b.Run("DecodeASONTyped", func(b *testing.B) {
+			b.Run("DecodeASUNTyped", func(b *testing.B) {
 				var out []BenchUser8
 				b.ReportAllocs()
-				b.SetBytes(int64(len(asonTyped)))
+				b.SetBytes(int64(len(asunTyped)))
 				for i := 0; i < b.N; i++ {
 					out = nil
-					if err := Decode(asonTyped, &out); err != nil {
+					if err := Decode(asunTyped, &out); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -570,11 +570,11 @@ func BenchmarkCompareAllTypes(b *testing.B) {
 	for _, n := range []int{100, 500} {
 		items := generateBenchAllTypes(n)
 		jsonData := mustJSONMarshal(items)
-		asonUntyped := mustAsonEncode(items, false)
-		asonTyped := mustAsonEncode(items, true)
+		asunUntyped := mustAsunEncode(items, false)
+		asunTyped := mustAsunEncode(items, true)
 
 		b.Run(fmt.Sprintf("Count=%d", n), func(b *testing.B) {
-			benchmarkCompare(b, jsonData, asonUntyped, asonTyped, items)
+			benchmarkCompare(b, jsonData, asunUntyped, asunTyped, items)
 
 			b.Run("DecodeJSON", func(b *testing.B) {
 				var out []BenchAllTypes
@@ -587,24 +587,24 @@ func BenchmarkCompareAllTypes(b *testing.B) {
 					}
 				}
 			})
-			b.Run("DecodeASON", func(b *testing.B) {
+			b.Run("DecodeASUN", func(b *testing.B) {
 				var out []BenchAllTypes
 				b.ReportAllocs()
-				b.SetBytes(int64(len(asonUntyped)))
+				b.SetBytes(int64(len(asunUntyped)))
 				for i := 0; i < b.N; i++ {
 					out = nil
-					if err := Decode(asonUntyped, &out); err != nil {
+					if err := Decode(asunUntyped, &out); err != nil {
 						b.Fatal(err)
 					}
 				}
 			})
-			b.Run("DecodeASONTyped", func(b *testing.B) {
+			b.Run("DecodeASUNTyped", func(b *testing.B) {
 				var out []BenchAllTypes
 				b.ReportAllocs()
-				b.SetBytes(int64(len(asonTyped)))
+				b.SetBytes(int64(len(asunTyped)))
 				for i := 0; i < b.N; i++ {
 					out = nil
-					if err := Decode(asonTyped, &out); err != nil {
+					if err := Decode(asunTyped, &out); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -617,11 +617,11 @@ func BenchmarkCompareDeep(b *testing.B) {
 	for _, n := range []int{10, 50, 100} {
 		companies := generateBenchCompanies(n)
 		jsonData := mustJSONMarshal(companies)
-		asonUntyped := mustAsonEncode(companies, false)
-		asonTyped := mustAsonEncode(companies, true)
+		asunUntyped := mustAsunEncode(companies, false)
+		asunTyped := mustAsunEncode(companies, true)
 
 		b.Run(fmt.Sprintf("Count=%d", n), func(b *testing.B) {
-			benchmarkCompare(b, jsonData, asonUntyped, asonTyped, companies)
+			benchmarkCompare(b, jsonData, asunUntyped, asunTyped, companies)
 
 			b.Run("DecodeJSON", func(b *testing.B) {
 				var out []BenchCompany
@@ -634,24 +634,24 @@ func BenchmarkCompareDeep(b *testing.B) {
 					}
 				}
 			})
-			b.Run("DecodeASON", func(b *testing.B) {
+			b.Run("DecodeASUN", func(b *testing.B) {
 				var out []BenchCompany
 				b.ReportAllocs()
-				b.SetBytes(int64(len(asonUntyped)))
+				b.SetBytes(int64(len(asunUntyped)))
 				for i := 0; i < b.N; i++ {
 					out = nil
-					if err := Decode(asonUntyped, &out); err != nil {
+					if err := Decode(asunUntyped, &out); err != nil {
 						b.Fatal(err)
 					}
 				}
 			})
-			b.Run("DecodeASONTyped", func(b *testing.B) {
+			b.Run("DecodeASUNTyped", func(b *testing.B) {
 				var out []BenchCompany
 				b.ReportAllocs()
-				b.SetBytes(int64(len(asonTyped)))
+				b.SetBytes(int64(len(asunTyped)))
 				for i := 0; i < b.N; i++ {
 					out = nil
-					if err := Decode(asonTyped, &out); err != nil {
+					if err := Decode(asunTyped, &out); err != nil {
 						b.Fatal(err)
 					}
 				}
@@ -677,7 +677,7 @@ func BenchmarkRoundtripSingle(b *testing.B) {
 			}
 		}
 	})
-	b.Run("FlatASON", func(b *testing.B) {
+	b.Run("FlatASUN", func(b *testing.B) {
 		var out BenchUser8
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -703,7 +703,7 @@ func BenchmarkRoundtripSingle(b *testing.B) {
 			}
 		}
 	})
-	b.Run("DeepASON", func(b *testing.B) {
+	b.Run("DeepASUN", func(b *testing.B) {
 		var out BenchCompany
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
@@ -720,11 +720,11 @@ func BenchmarkRoundtripSingle(b *testing.B) {
 
 func BenchmarkAnnotatedComparison(b *testing.B) {
 	users := generateBenchUsers(1000)
-	untypedFlat := mustAsonEncode(users, false)
-	typedFlat := mustAsonEncode(users, true)
+	untypedFlat := mustAsunEncode(users, false)
+	typedFlat := mustAsunEncode(users, true)
 	deep := generateBenchCompanies(1)[0]
-	untypedDeep := mustAsonEncode(&deep, false)
-	typedDeep := mustAsonEncode(&deep, true)
+	untypedDeep := mustAsunEncode(&deep, false)
+	typedDeep := mustAsunEncode(&deep, true)
 
 	b.Run("DecodeFlat1000Untyped", func(b *testing.B) {
 		var out []BenchUser8
@@ -776,10 +776,10 @@ func BenchmarkBinaryComparison(b *testing.B) {
 	flat := generateBenchUsers(1)[0]
 	deep := generateBenchCompanies(1)[0]
 	flatJSON := mustJSONMarshal(&flat)
-	flatASON := mustAsonEncode(&flat, false)
+	flatASUN := mustAsunEncode(&flat, false)
 	flatBIN, _ := EncodeBinary(&flat)
 	deepJSON := mustJSONMarshal(&deep)
-	deepASON := mustAsonEncode(&deep, false)
+	deepASUN := mustAsunEncode(&deep, false)
 	deepBIN, _ := EncodeBinary(&deep)
 
 	b.Run("FlatEncodeJSON", func(b *testing.B) {
@@ -791,9 +791,9 @@ func BenchmarkBinaryComparison(b *testing.B) {
 			}
 		}
 	})
-	b.Run("FlatEncodeASON", func(b *testing.B) {
+	b.Run("FlatEncodeASUN", func(b *testing.B) {
 		b.ReportAllocs()
-		b.SetBytes(int64(len(flatASON)))
+		b.SetBytes(int64(len(flatASUN)))
 		for i := 0; i < b.N; i++ {
 			if _, err := Encode(&flat); err != nil {
 				b.Fatal(err)
@@ -820,13 +820,13 @@ func BenchmarkBinaryComparison(b *testing.B) {
 			}
 		}
 	})
-	b.Run("FlatDecodeASON", func(b *testing.B) {
+	b.Run("FlatDecodeASUN", func(b *testing.B) {
 		var out BenchUser8
 		b.ReportAllocs()
-		b.SetBytes(int64(len(flatASON)))
+		b.SetBytes(int64(len(flatASUN)))
 		for i := 0; i < b.N; i++ {
 			out = BenchUser8{}
-			if err := Decode(flatASON, &out); err != nil {
+			if err := Decode(flatASUN, &out); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -852,9 +852,9 @@ func BenchmarkBinaryComparison(b *testing.B) {
 			}
 		}
 	})
-	b.Run("DeepEncodeASON", func(b *testing.B) {
+	b.Run("DeepEncodeASUN", func(b *testing.B) {
 		b.ReportAllocs()
-		b.SetBytes(int64(len(deepASON)))
+		b.SetBytes(int64(len(deepASUN)))
 		for i := 0; i < b.N; i++ {
 			if _, err := Encode(&deep); err != nil {
 				b.Fatal(err)
@@ -881,13 +881,13 @@ func BenchmarkBinaryComparison(b *testing.B) {
 			}
 		}
 	})
-	b.Run("DeepDecodeASON", func(b *testing.B) {
+	b.Run("DeepDecodeASUN", func(b *testing.B) {
 		var out BenchCompany
 		b.ReportAllocs()
-		b.SetBytes(int64(len(deepASON)))
+		b.SetBytes(int64(len(deepASUN)))
 		for i := 0; i < b.N; i++ {
 			out = BenchCompany{}
-			if err := Decode(deepASON, &out); err != nil {
+			if err := Decode(deepASUN, &out); err != nil {
 				b.Fatal(err)
 			}
 		}

@@ -1,4 +1,4 @@
-package ason
+package asun
 
 import (
 	"encoding/binary"
@@ -7,7 +7,7 @@ import (
 	"unsafe"
 )
 
-// DecodeBinary deserializes ASON-BIN format into a Go value.
+// DecodeBinary deserializes ASUN-BIN format into a Go value.
 // It uses zero-copy for strings where possible.
 func DecodeBinary(data []byte, v any) error {
 	rv := reflect.ValueOf(v)
@@ -110,7 +110,7 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		}
 		n := int(binary.LittleEndian.Uint32(data))
 		data = data[4:]
-		
+
 		if rv.Type().Elem().Kind() == reflect.Uint8 {
 			if len(data) < n {
 				return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading bytes"}
@@ -119,7 +119,7 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 			rv.SetBytes(data[:n:n])
 			return data[n:], nil
 		}
-		
+
 		if rv.IsNil() || rv.Cap() < n {
 			rv.Set(reflect.MakeSlice(rv.Type(), n, n))
 		} else {
@@ -139,7 +139,7 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		}
 		n := int(binary.LittleEndian.Uint32(data))
 		data = data[4:]
-		
+
 		limit := rv.Len()
 		var err error
 		for i := 0; i < n; i++ {
@@ -186,7 +186,7 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		return unmarshalBinValue(data, rv.Elem())
 	case reflect.Interface:
 		// Interface decoding is tricky without type info.
-		// In ASON-BIN, we don't encode type info for interfaces.
+		// In ASUN-BIN, we don't encode type info for interfaces.
 		// If the interface is nil, we can't decode it.
 		// If it's not nil, we decode into the existing value.
 		if len(data) < 1 {

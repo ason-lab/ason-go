@@ -5,201 +5,201 @@ import (
 	"fmt"
 	"log"
 
-	ason "github.com/ason-lab/ason-go"
+	asun "github.com/asun-lab/asun-go"
 )
 
 type Department struct {
-	Title string `ason:"title" json:"title"`
+	Title string `asun:"title" json:"title"`
 }
 
 type Employee struct {
-	ID     int64      `ason:"id" json:"id"`
-	Name   string     `ason:"name" json:"name"`
-	Dept   Department `ason:"dept" json:"dept"`
-	Skills []string   `ason:"skills" json:"skills"`
-	Active bool       `ason:"active" json:"active"`
+	ID     int64      `asun:"id" json:"id"`
+	Name   string     `asun:"name" json:"name"`
+	Dept   Department `asun:"dept" json:"dept"`
+	Skills []string   `asun:"skills" json:"skills"`
+	Active bool       `asun:"active" json:"active"`
 }
 
 type AttrEntry struct {
-	Key   string `ason:"key" json:"key"`
-	Value int64  `ason:"value" json:"value"`
+	Key   string `asun:"key" json:"key"`
+	Value int64  `asun:"value" json:"value"`
 }
 
 type WithEntries struct {
-	Name  string      `ason:"name" json:"name"`
-	Attrs []AttrEntry `ason:"attrs" json:"attrs"`
+	Name  string      `asun:"name" json:"name"`
+	Attrs []AttrEntry `asun:"attrs" json:"attrs"`
 }
 
 type Person struct {
-	Name string `ason:"name" json:"name"`
-	Age  int64  `ason:"age" json:"age"`
+	Name string `asun:"name" json:"name"`
+	Age  int64  `asun:"age" json:"age"`
 }
 
 type GroupEntry struct {
-	Key   string   `ason:"key" json:"key"`
-	Value []Person `ason:"value" json:"value"`
+	Key   string   `asun:"key" json:"key"`
+	Value []Person `asun:"value" json:"value"`
 }
 
 type WithGroupEntries struct {
-	Groups []GroupEntry `ason:"groups" json:"groups"`
+	Groups []GroupEntry `asun:"groups" json:"groups"`
 }
 
 type Nested struct {
-	Name string  `ason:"name" json:"name"`
-	Addr Address `ason:"addr" json:"addr"`
+	Name string  `asun:"name" json:"name"`
+	Addr Address `asun:"addr" json:"addr"`
 }
 
 type Address struct {
-	City string `ason:"city" json:"city"`
-	Zip  int64  `ason:"zip" json:"zip"`
+	City string `asun:"city" json:"city"`
+	Zip  int64  `asun:"zip" json:"zip"`
 }
 
 type AllTypes struct {
-	B         bool      `ason:"b" json:"b"`
-	I8v       int8      `ason:"i8v" json:"i8v"`
-	I16v      int16     `ason:"i16v" json:"i16v"`
-	I32v      int32     `ason:"i32v" json:"i32v"`
-	I64v      int64     `ason:"i64v" json:"i64v"`
-	U8v       uint8     `ason:"u8v" json:"u8v"`
-	U16v      uint16    `ason:"u16v" json:"u16v"`
-	U32v      uint32    `ason:"u32v" json:"u32v"`
-	U64v      uint64    `ason:"u64v" json:"u64v"`
-	F32v      float32   `ason:"f32v" json:"f32v"`
-	F64v      float64   `ason:"f64v" json:"f64v"`
-	S         string    `ason:"s" json:"s"`
-	OptSome   *int64    `ason:"opt_some" json:"opt_some"`
-	OptNone   *int64    `ason:"opt_none" json:"opt_none"`
-	VecInt    []int64   `ason:"vec_int" json:"vec_int"`
-	VecStr    []string  `ason:"vec_str" json:"vec_str"`
-	NestedVec [][]int64 `ason:"nested_vec" json:"nested_vec"`
+	B         bool      `asun:"b" json:"b"`
+	I8v       int8      `asun:"i8v" json:"i8v"`
+	I16v      int16     `asun:"i16v" json:"i16v"`
+	I32v      int32     `asun:"i32v" json:"i32v"`
+	I64v      int64     `asun:"i64v" json:"i64v"`
+	U8v       uint8     `asun:"u8v" json:"u8v"`
+	U16v      uint16    `asun:"u16v" json:"u16v"`
+	U32v      uint32    `asun:"u32v" json:"u32v"`
+	U64v      uint64    `asun:"u64v" json:"u64v"`
+	F32v      float32   `asun:"f32v" json:"f32v"`
+	F64v      float64   `asun:"f64v" json:"f64v"`
+	S         string    `asun:"s" json:"s"`
+	OptSome   *int64    `asun:"opt_some" json:"opt_some"`
+	OptNone   *int64    `asun:"opt_none" json:"opt_none"`
+	VecInt    []int64   `asun:"vec_int" json:"vec_int"`
+	VecStr    []string  `asun:"vec_str" json:"vec_str"`
+	NestedVec [][]int64 `asun:"nested_vec" json:"nested_vec"`
 }
 
 type Building struct {
-	Name        string  `ason:"name" json:"name"`
-	Floors      int64   `ason:"floors" json:"floors"`
-	Residential bool    `ason:"residential" json:"residential"`
-	HeightM     float64 `ason:"height_m" json:"height_m"`
+	Name        string  `asun:"name" json:"name"`
+	Floors      int64   `asun:"floors" json:"floors"`
+	Residential bool    `asun:"residential" json:"residential"`
+	HeightM     float64 `asun:"height_m" json:"height_m"`
 }
 
 type Street struct {
-	Name      string     `ason:"name" json:"name"`
-	LengthKm  float64    `ason:"length_km" json:"length_km"`
-	Buildings []Building `ason:"buildings" json:"buildings"`
+	Name      string     `asun:"name" json:"name"`
+	LengthKm  float64    `asun:"length_km" json:"length_km"`
+	Buildings []Building `asun:"buildings" json:"buildings"`
 }
 
 type District struct {
-	Name       string   `ason:"name" json:"name"`
-	Population int64    `ason:"population" json:"population"`
-	Streets    []Street `ason:"streets" json:"streets"`
+	Name       string   `asun:"name" json:"name"`
+	Population int64    `asun:"population" json:"population"`
+	Streets    []Street `asun:"streets" json:"streets"`
 }
 
 type City struct {
-	Name       string     `ason:"name" json:"name"`
-	Population int64      `ason:"population" json:"population"`
-	AreaKm2    float64    `ason:"area_km2" json:"area_km2"`
-	Districts  []District `ason:"districts" json:"districts"`
+	Name       string     `asun:"name" json:"name"`
+	Population int64      `asun:"population" json:"population"`
+	AreaKm2    float64    `asun:"area_km2" json:"area_km2"`
+	Districts  []District `asun:"districts" json:"districts"`
 }
 
 type Region struct {
-	Name   string `ason:"name" json:"name"`
-	Cities []City `ason:"cities" json:"cities"`
+	Name   string `asun:"name" json:"name"`
+	Cities []City `asun:"cities" json:"cities"`
 }
 
 type Country struct {
-	Name        string   `ason:"name" json:"name"`
-	Code        string   `ason:"code" json:"code"`
-	Population  int64    `ason:"population" json:"population"`
-	GdpTrillion float64  `ason:"gdp_trillion" json:"gdp_trillion"`
-	Regions     []Region `ason:"regions" json:"regions"`
+	Name        string   `asun:"name" json:"name"`
+	Code        string   `asun:"code" json:"code"`
+	Population  int64    `asun:"population" json:"population"`
+	GdpTrillion float64  `asun:"gdp_trillion" json:"gdp_trillion"`
+	Regions     []Region `asun:"regions" json:"regions"`
 }
 
 type State struct {
-	Name       string `ason:"name" json:"name"`
-	Capital    string `ason:"capital" json:"capital"`
-	Population int64  `ason:"population" json:"population"`
+	Name       string `asun:"name" json:"name"`
+	Capital    string `asun:"capital" json:"capital"`
+	Population int64  `asun:"population" json:"population"`
 }
 
 type Nation struct {
-	Name   string  `ason:"name" json:"name"`
-	States []State `ason:"states" json:"states"`
+	Name   string  `asun:"name" json:"name"`
+	States []State `asun:"states" json:"states"`
 }
 
 type Continent struct {
-	Name    string   `ason:"name" json:"name"`
-	Nations []Nation `ason:"nations" json:"nations"`
+	Name    string   `asun:"name" json:"name"`
+	Nations []Nation `asun:"nations" json:"nations"`
 }
 
 type Planet struct {
-	Name       string      `ason:"name" json:"name"`
-	RadiusKm   float64     `ason:"radius_km" json:"radius_km"`
-	HasLife    bool        `ason:"has_life" json:"has_life"`
-	Continents []Continent `ason:"continents" json:"continents"`
+	Name       string      `asun:"name" json:"name"`
+	RadiusKm   float64     `asun:"radius_km" json:"radius_km"`
+	HasLife    bool        `asun:"has_life" json:"has_life"`
+	Continents []Continent `asun:"continents" json:"continents"`
 }
 
 type SolarSystem struct {
-	Name     string   `ason:"name" json:"name"`
-	StarType string   `ason:"star_type" json:"star_type"`
-	Planets  []Planet `ason:"planets" json:"planets"`
+	Name     string   `asun:"name" json:"name"`
+	StarType string   `asun:"star_type" json:"star_type"`
+	Planets  []Planet `asun:"planets" json:"planets"`
 }
 
 type Galaxy struct {
-	Name              string        `ason:"name" json:"name"`
-	StarCountBillions float64       `ason:"star_count_billions" json:"star_count_billions"`
-	Systems           []SolarSystem `ason:"systems" json:"systems"`
+	Name              string        `asun:"name" json:"name"`
+	StarCountBillions float64       `asun:"star_count_billions" json:"star_count_billions"`
+	Systems           []SolarSystem `asun:"systems" json:"systems"`
 }
 
 type Universe struct {
-	Name            string   `ason:"name" json:"name"`
-	AgeBillionYears float64  `ason:"age_billion_years" json:"age_billion_years"`
-	Galaxies        []Galaxy `ason:"galaxies" json:"galaxies"`
+	Name            string   `asun:"name" json:"name"`
+	AgeBillionYears float64  `asun:"age_billion_years" json:"age_billion_years"`
+	Galaxies        []Galaxy `asun:"galaxies" json:"galaxies"`
 }
 
 type DbConfig struct {
-	Host           string  `ason:"host" json:"host"`
-	Port           int64   `ason:"port" json:"port"`
-	MaxConnections int64   `ason:"max_connections" json:"max_connections"`
-	SSL            bool    `ason:"ssl" json:"ssl"`
-	TimeoutMs      float64 `ason:"timeout_ms" json:"timeout_ms"`
+	Host           string  `asun:"host" json:"host"`
+	Port           int64   `asun:"port" json:"port"`
+	MaxConnections int64   `asun:"max_connections" json:"max_connections"`
+	SSL            bool    `asun:"ssl" json:"ssl"`
+	TimeoutMs      float64 `asun:"timeout_ms" json:"timeout_ms"`
 }
 
 type CacheConfig struct {
-	Enabled    bool  `ason:"enabled" json:"enabled"`
-	TTLSeconds int64 `ason:"ttl_seconds" json:"ttl_seconds"`
-	MaxSizeMb  int64 `ason:"max_size_mb" json:"max_size_mb"`
+	Enabled    bool  `asun:"enabled" json:"enabled"`
+	TTLSeconds int64 `asun:"ttl_seconds" json:"ttl_seconds"`
+	MaxSizeMb  int64 `asun:"max_size_mb" json:"max_size_mb"`
 }
 
 type LogConfig struct {
-	Level  string  `ason:"level" json:"level"`
-	File   *string `ason:"file" json:"file"`
-	Rotate bool    `ason:"rotate" json:"rotate"`
+	Level  string  `asun:"level" json:"level"`
+	File   *string `asun:"file" json:"file"`
+	Rotate bool    `asun:"rotate" json:"rotate"`
 }
 
 type StringEntry struct {
-	Key   string `ason:"key" json:"key"`
-	Value string `ason:"value" json:"value"`
+	Key   string `asun:"key" json:"key"`
+	Value string `asun:"value" json:"value"`
 }
 
 type ServiceConfig struct {
-	Name     string        `ason:"name" json:"name"`
-	Version  string        `ason:"version" json:"version"`
-	Db       DbConfig      `ason:"db" json:"db"`
-	Cache    CacheConfig   `ason:"cache" json:"cache"`
-	Log      LogConfig     `ason:"log" json:"log"`
-	Features []string      `ason:"features" json:"features"`
-	Env      []StringEntry `ason:"env" json:"env"`
+	Name     string        `asun:"name" json:"name"`
+	Version  string        `asun:"version" json:"version"`
+	Db       DbConfig      `asun:"db" json:"db"`
+	Cache    CacheConfig   `asun:"cache" json:"cache"`
+	Log      LogConfig     `asun:"log" json:"log"`
+	Features []string      `asun:"features" json:"features"`
+	Env      []StringEntry `asun:"env" json:"env"`
 }
 
 func i64ptr(v int64) *int64   { return &v }
 func strptr(v string) *string { return &v }
 
 func main() {
-	fmt.Println("=== ASON Complex Examples ===")
+	fmt.Println("=== ASUN Complex Examples ===")
 	fmt.Println()
 
 	// 1. Nested struct
 	fmt.Println("1. Nested struct:")
 	var emp Employee
-	if err := ason.Decode([]byte("{id,name,dept@{title},skills,active}:(1,Alice,(Manager),[rust],true)"), &emp); err != nil {
+	if err := asun.Decode([]byte("{id,name,dept@{title},skills,active}:(1,Alice,(Manager),[rust],true)"), &emp); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   %+v\n\n", emp)
@@ -211,7 +211,7 @@ func main() {
   (2, Bob, (Engineer), [Python], false),
   (3, "Carol Smith", (Director), [Leadership, Strategy], true)`)
 	var employees []Employee
-	if err := ason.Decode(input2, &employees); err != nil {
+	if err := asun.Decode(input2, &employees); err != nil {
 		log.Fatal(err)
 	}
 	for _, e := range employees {
@@ -221,7 +221,7 @@ func main() {
 	// 3. Entry-list field
 	fmt.Println("\n3. Entry-list field:")
 	var wm WithEntries
-	if err := ason.Decode([]byte("{name,attrs@[{key,value}]}:(Alice,[(age,30),(score,95)])"), &wm); err != nil {
+	if err := asun.Decode([]byte("{name,attrs@[{key,value}]}:(Alice,[(age,30),(score,95)])"), &wm); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   %+v\n", wm)
@@ -229,7 +229,7 @@ func main() {
 	// 3b. Nested entry-list field
 	fmt.Println("\n3b. Nested entry-list field:")
 	var groups WithGroupEntries
-	if err := ason.Decode([]byte("{groups@[{key,value@[{name,age}]}]}:([(teamA,[(Alice,30),(Bob,28)]),(teamB,[(Carol,41)])])"), &groups); err != nil {
+	if err := asun.Decode([]byte("{groups@[{key,value@[{name,age}]}]}:([(teamA,[(Alice,30),(Bob,28)]),(teamB,[(Carol,41)])])"), &groups); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   %+v\n", groups)
@@ -237,13 +237,13 @@ func main() {
 	// 4. Nested struct roundtrip
 	fmt.Println("\n4. Nested struct roundtrip:")
 	nested := Nested{Name: "Alice", Addr: Address{City: "NYC", Zip: 10001}}
-	s, err := ason.Encode(&nested)
+	s, err := asun.Encode(&nested)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   serialized:   %s\n", s)
 	var nested2 Nested
-	if err := ason.Decode(s, &nested2); err != nil {
+	if err := asun.Decode(s, &nested2); err != nil {
 		log.Fatal(err)
 	}
 	if nested != nested2 {
@@ -254,16 +254,16 @@ func main() {
 	// 5. Escaped strings
 	fmt.Println("\n5. Escaped strings:")
 	type Note struct {
-		Text string `ason:"text"`
+		Text string `asun:"text"`
 	}
 	note := Note{Text: "say \"hi\", then (wave)\tnewline\nend"}
-	s, err = ason.Encode(&note)
+	s, err = asun.Encode(&note)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   serialized:   %s\n", s)
 	var note2 Note
-	if err := ason.Decode(s, &note2); err != nil {
+	if err := asun.Decode(s, &note2); err != nil {
 		log.Fatal(err)
 	}
 	if note != note2 {
@@ -274,18 +274,18 @@ func main() {
 	// 6. Float fields
 	fmt.Println("\n6. Float fields:")
 	type Measurement struct {
-		ID    int64   `ason:"id"`
-		Value float64 `ason:"value"`
-		Label string  `ason:"label"`
+		ID    int64   `asun:"id"`
+		Value float64 `asun:"value"`
+		Label string  `asun:"label"`
 	}
 	m := Measurement{ID: 2, Value: 95.0, Label: "score"}
-	s, err = ason.Encode(&m)
+	s, err = asun.Encode(&m)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   serialized: %s\n", s)
 	var m2 Measurement
-	if err := ason.Decode(s, &m2); err != nil {
+	if err := asun.Decode(s, &m2); err != nil {
 		log.Fatal(err)
 	}
 	if m != m2 {
@@ -296,18 +296,18 @@ func main() {
 	// 7. Negative numbers
 	fmt.Println("\n7. Negative numbers:")
 	type Nums struct {
-		A int64   `ason:"a"`
-		B float64 `ason:"b"`
-		C int64   `ason:"c"`
+		A int64   `asun:"a"`
+		B float64 `asun:"b"`
+		C int64   `asun:"c"`
 	}
 	n := Nums{A: -42, B: -3.14, C: -9223372036854775807}
-	s, err = ason.Encode(&n)
+	s, err = asun.Encode(&n)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   serialized:   %s\n", s)
 	var n2 Nums
-	if err := ason.Decode(s, &n2); err != nil {
+	if err := asun.Decode(s, &n2); err != nil {
 		log.Fatal(err)
 	}
 	if n != n2 {
@@ -329,14 +329,14 @@ func main() {
 		VecStr:    []string{"alpha", "beta gamma", "delta"},
 		NestedVec: [][]int64{{1, 2}, {3, 4, 5}},
 	}
-	s, err = ason.Encode(&all)
+	s, err = asun.Encode(&all)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   serialized (%d bytes):\n", len(s))
 	fmt.Printf("   %s\n", s)
 	var all2 AllTypes
-	if err := ason.Decode(s, &all2); err != nil {
+	if err := asun.Decode(s, &all2); err != nil {
 		log.Fatal(err)
 	}
 	if all.B != all2.B || all.I64v != all2.I64v || all.U64v != all2.U64v || all.S != all2.S {
@@ -385,7 +385,7 @@ func main() {
 			}},
 		},
 	}
-	s, err = ason.Encode(&country)
+	s, err = asun.Encode(&country)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -396,30 +396,30 @@ func main() {
 	}
 	fmt.Printf("   first 200 chars: %s\n", preview)
 	var country2 Country
-	if err := ason.Decode(s, &country2); err != nil {
+	if err := asun.Decode(s, &country2); err != nil {
 		log.Fatal(err)
 	}
 	if country.Name != country2.Name || country.Population != country2.Population {
 		log.Fatal("5-level roundtrip mismatch")
 	}
-	fmt.Println("   ✓ 5-level ASON-text roundtrip OK")
+	fmt.Println("   ✓ 5-level ASUN-text roundtrip OK")
 
-	// ASON binary roundtrip
-	binBytes, err := ason.EncodeBinary(&country)
+	// ASUN binary roundtrip
+	binBytes, err := asun.EncodeBinary(&country)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var country3 Country
-	if err := ason.DecodeBinary(binBytes, &country3); err != nil {
+	if err := asun.DecodeBinary(binBytes, &country3); err != nil {
 		log.Fatal(err)
 	}
 	if country.Name != country3.Name || country.Population != country3.Population {
 		log.Fatal("5-level binary roundtrip mismatch")
 	}
-	fmt.Println("   ✓ 5-level ASON-bin roundtrip OK")
+	fmt.Println("   ✓ 5-level ASUN-bin roundtrip OK")
 
 	jsonBytes, _ := json.Marshal(&country)
-	fmt.Printf("   ASON text: %d B | ASON bin: %d B | JSON: %d B\n",
+	fmt.Printf("   ASUN text: %d B | ASUN bin: %d B | JSON: %d B\n",
 		len(s), len(binBytes), len(jsonBytes))
 	fmt.Printf("   BIN vs JSON: %.0f%% smaller | TEXT vs JSON: %.0f%% smaller\n",
 		(1.0-float64(len(binBytes))/float64(len(jsonBytes)))*100.0,
@@ -456,36 +456,36 @@ func main() {
 			}},
 		}},
 	}
-	s, err = ason.Encode(&universe)
+	s, err = asun.Encode(&universe)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   serialized (%d bytes)\n", len(s))
 	var universe2 Universe
-	if err := ason.Decode(s, &universe2); err != nil {
+	if err := asun.Decode(s, &universe2); err != nil {
 		log.Fatal(err)
 	}
 	if universe.Name != universe2.Name {
 		log.Fatal("7-level roundtrip mismatch")
 	}
-	fmt.Println("   ✓ 7-level ASON-text roundtrip OK")
+	fmt.Println("   ✓ 7-level ASUN-text roundtrip OK")
 
-	// ASON binary roundtrip
-	uniBin, err := ason.EncodeBinary(&universe)
+	// ASUN binary roundtrip
+	uniBin, err := asun.EncodeBinary(&universe)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var universe3 Universe
-	if err := ason.DecodeBinary(uniBin, &universe3); err != nil {
+	if err := asun.DecodeBinary(uniBin, &universe3); err != nil {
 		log.Fatal(err)
 	}
 	if universe.Name != universe3.Name {
 		log.Fatal("7-level binary roundtrip mismatch")
 	}
-	fmt.Println("   ✓ 7-level ASON-bin roundtrip OK")
+	fmt.Println("   ✓ 7-level ASUN-bin roundtrip OK")
 
 	jsonBytes, _ = json.Marshal(&universe)
-	fmt.Printf("   ASON text: %d B | ASON bin: %d B | JSON: %d B\n",
+	fmt.Printf("   ASUN text: %d B | ASUN bin: %d B | JSON: %d B\n",
 		len(s), len(uniBin), len(jsonBytes))
 	fmt.Printf("   BIN vs JSON: %.0f%% smaller | TEXT vs JSON: %.0f%% smaller\n",
 		(1.0-float64(len(uniBin))/float64(len(jsonBytes)))*100.0,
@@ -505,37 +505,37 @@ func main() {
 			{Key: "SECRET_KEY", Value: "abc123!@#"},
 		},
 	}
-	s, err = ason.Encode(&config)
+	s, err = asun.Encode(&config)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   serialized (%d bytes):\n", len(s))
 	fmt.Printf("   %s\n", s)
 	var config2 ServiceConfig
-	if err := ason.Decode(s, &config2); err != nil {
+	if err := asun.Decode(s, &config2); err != nil {
 		log.Fatal(err)
 	}
 	if config.Name != config2.Name || config.Db.Port != config2.Db.Port {
 		log.Fatal("config roundtrip mismatch")
 	}
-	fmt.Println("   ✓ config ASON-text roundtrip OK")
+	fmt.Println("   ✓ config ASUN-text roundtrip OK")
 	jsonBytes, _ = json.Marshal(&config)
-	fmt.Printf("   ASON text: %d B | JSON: %d B | TEXT vs JSON: %.0f%% smaller\n",
+	fmt.Printf("   ASUN text: %d B | JSON: %d B | TEXT vs JSON: %.0f%% smaller\n",
 		len(s), len(jsonBytes), (1.0-float64(len(s))/float64(len(jsonBytes)))*100.0)
 	// Binary roundtrip
-	cfgBin, err := ason.EncodeBinary(&config)
+	cfgBin, err := asun.EncodeBinary(&config)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var config3 ServiceConfig
-	if err := ason.DecodeBinary(cfgBin, &config3); err != nil {
+	if err := asun.DecodeBinary(cfgBin, &config3); err != nil {
 		log.Fatal(err)
 	}
 	if config.Name != config3.Name || config.Db.Port != config3.Db.Port {
 		log.Fatal("config binary roundtrip mismatch")
 	}
-	fmt.Println("   ✓ config ASON-bin roundtrip OK")
-	fmt.Printf("   ASON bin: %d B | BIN vs JSON: %.0f%% smaller\n",
+	fmt.Println("   ✓ config ASUN-bin roundtrip OK")
+	fmt.Printf("   ASUN bin: %d B | BIN vs JSON: %.0f%% smaller\n",
 		len(cfgBin), (1.0-float64(len(cfgBin))/float64(len(jsonBytes)))*100.0)
 
 	// 12. Large structure — 100 countries
@@ -568,14 +568,14 @@ func main() {
 			Population: int64(1000000 + i*500000), GdpTrillion: float64(i) * 0.5, Regions: regions,
 		}
 	}
-	totalASON, totalJSON, totalBIN := 0, 0, 0
+	totalASUN, totalJSON, totalBIN := 0, 0, 0
 	for i := range countries {
-		as, _ := ason.Encode(&countries[i])
+		as, _ := asun.Encode(&countries[i])
 		js, _ := json.Marshal(&countries[i])
-		bs, _ := ason.EncodeBinary(&countries[i])
+		bs, _ := asun.EncodeBinary(&countries[i])
 		// Verify text roundtrip
 		var c2 Country
-		if err := ason.Decode(as, &c2); err != nil {
+		if err := asun.Decode(as, &c2); err != nil {
 			log.Fatalf("country %d roundtrip failed: %v", i, err)
 		}
 		if countries[i].Name != c2.Name {
@@ -583,22 +583,22 @@ func main() {
 		}
 		// Verify binary roundtrip
 		var c3 Country
-		if err := ason.DecodeBinary(bs, &c3); err != nil {
+		if err := asun.DecodeBinary(bs, &c3); err != nil {
 			log.Fatalf("country %d binary roundtrip failed: %v", i, err)
 		}
 		if countries[i].Name != c3.Name {
 			log.Fatalf("country %d binary name mismatch", i)
 		}
-		totalASON += len(as)
+		totalASUN += len(as)
 		totalJSON += len(js)
 		totalBIN += len(bs)
 	}
 	fmt.Println("   100 countries with 5-level nesting:")
-	fmt.Printf("   Total ASON text: %d bytes (%.1f KB)\n", totalASON, float64(totalASON)/1024.0)
-	fmt.Printf("   Total ASON bin:  %d bytes (%.1f KB)\n", totalBIN, float64(totalBIN)/1024.0)
+	fmt.Printf("   Total ASUN text: %d bytes (%.1f KB)\n", totalASUN, float64(totalASUN)/1024.0)
+	fmt.Printf("   Total ASUN bin:  %d bytes (%.1f KB)\n", totalBIN, float64(totalBIN)/1024.0)
 	fmt.Printf("   Total JSON:      %d bytes (%.1f KB)\n", totalJSON, float64(totalJSON)/1024.0)
 	fmt.Printf("   TEXT vs JSON: %.0f%% smaller | BIN vs JSON: %.0f%% smaller\n",
-		(1.0-float64(totalASON)/float64(totalJSON))*100.0,
+		(1.0-float64(totalASUN)/float64(totalJSON))*100.0,
 		(1.0-float64(totalBIN)/float64(totalJSON))*100.0)
 	fmt.Println("   ✓ all 100 countries roundtrip OK (text + bin)")
 
@@ -606,7 +606,7 @@ func main() {
 	fmt.Println("\n13. Deserialize with nested schema type hints:")
 	deepInput := []byte("{name,code,population,gdp_trillion,regions@[{name,cities@[{name,population,area_km2,districts@[{name,population,streets@[{name,length_km,buildings@[{name,floors,residential,height_m}]}]}]}]}]}:(TestLand,TL,1000000,0.5,[(TestRegion,[(TestCity,500000,100.0,[(Central,250000,[(Main St,2.5,[(HQ,10,false,45.0)])])])])])")
 	var dc Country
-	if err := ason.Decode(deepInput, &dc); err != nil {
+	if err := asun.Decode(deepInput, &dc); err != nil {
 		log.Fatal(err)
 	}
 	if dc.Name != "TestLand" {
@@ -622,13 +622,13 @@ func main() {
 	// 14. Typed serialization
 	fmt.Println("\n14. Typed serialization (EncodeTyped):")
 	empForTyped := Employee{ID: 1, Name: "Alice", Dept: Department{Title: "Engineering"}, Skills: []string{"Rust", "Go"}, Active: true}
-	typedBytes, err := ason.EncodeTyped(&empForTyped)
+	typedBytes, err := asun.EncodeTyped(&empForTyped)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   nested struct: %s\n", typedBytes)
 	var empBack Employee
-	if err := ason.Decode(typedBytes, &empBack); err != nil {
+	if err := asun.Decode(typedBytes, &empBack); err != nil {
 		log.Fatal(err)
 	}
 	if empBack.Name != "Alice" {
@@ -636,7 +636,7 @@ func main() {
 	}
 	fmt.Println("   ✓ typed nested struct roundtrip OK")
 
-	allTyped, err := ason.EncodeTyped(&all)
+	allTyped, err := asun.EncodeTyped(&all)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -647,7 +647,7 @@ func main() {
 	}
 	fmt.Printf("   all-types (%d bytes): %s...\n", len(allTyped), p)
 	var allBack AllTypes
-	if err := ason.Decode(allTyped, &allBack); err != nil {
+	if err := asun.Decode(allTyped, &allBack); err != nil {
 		log.Fatal(err)
 	}
 	if allBack.S != all.S || allBack.B != all.B {
@@ -655,7 +655,7 @@ func main() {
 	}
 	fmt.Println("   ✓ typed all-types roundtrip OK")
 
-	configTyped, err := ason.EncodeTyped(&config)
+	configTyped, err := asun.EncodeTyped(&config)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -666,38 +666,38 @@ func main() {
 	}
 	fmt.Printf("   config (%d bytes): %s...\n", len(configTyped), p)
 	var configBack ServiceConfig
-	if err := ason.Decode(configTyped, &configBack); err != nil {
+	if err := asun.Decode(configTyped, &configBack); err != nil {
 		log.Fatal(err)
 	}
 	if configBack.Name != config.Name {
 		log.Fatal("typed config roundtrip mismatch")
 	}
 	fmt.Println("   ✓ typed config roundtrip OK")
-	untyped, _ := ason.Encode(&config)
+	untyped, _ := asun.Encode(&config)
 	fmt.Printf("   untyped: %d bytes | typed: %d bytes | overhead: %d bytes\n",
 		len(untyped), len(configTyped), len(configTyped)-len(untyped))
 
 	// 15. Edge cases
 	fmt.Println("\n15. Edge cases:")
 	type WithVec struct {
-		Items []int64 `ason:"items"`
+		Items []int64 `asun:"items"`
 	}
 	wv := WithVec{Items: []int64{}}
-	s, _ = ason.Encode(&wv)
+	s, _ = asun.Encode(&wv)
 	fmt.Printf("   empty vec: %s\n", s)
 	var wv2 WithVec
-	if err := ason.Decode(s, &wv2); err != nil {
+	if err := asun.Decode(s, &wv2); err != nil {
 		log.Fatal(err)
 	}
 
 	type Special struct {
-		Val string `ason:"val"`
+		Val string `asun:"val"`
 	}
 	sp := Special{Val: "tabs\there, newlines\nhere, quotes\"and\\backslash"}
-	s, _ = ason.Encode(&sp)
+	s, _ = asun.Encode(&sp)
 	fmt.Printf("   special chars: %s\n", s)
 	var sp2 Special
-	if err := ason.Decode(s, &sp2); err != nil {
+	if err := asun.Decode(s, &sp2); err != nil {
 		log.Fatal(err)
 	}
 	if sp != sp2 {
@@ -705,19 +705,19 @@ func main() {
 	}
 
 	sp3 := Special{Val: "true"}
-	s, _ = ason.Encode(&sp3)
+	s, _ = asun.Encode(&sp3)
 	fmt.Printf("   bool-like string: %s\n", s)
 	var sp4 Special
-	ason.Decode(s, &sp4)
+	asun.Decode(s, &sp4)
 	if sp3 != sp4 {
 		log.Fatal("bool-like string roundtrip mismatch")
 	}
 
 	sp5 := Special{Val: "12345"}
-	s, _ = ason.Encode(&sp5)
+	s, _ = asun.Encode(&sp5)
 	fmt.Printf("   number-like string: %s\n", s)
 	var sp6 Special
-	ason.Decode(s, &sp6)
+	asun.Decode(s, &sp6)
 	if sp5 != sp6 {
 		log.Fatal("number-like string roundtrip mismatch")
 	}
@@ -726,13 +726,13 @@ func main() {
 	// 16. Triple-nested arrays
 	fmt.Println("\n16. Triple-nested arrays:")
 	type Matrix3D struct {
-		Data [][][]int64 `ason:"data"`
+		Data [][][]int64 `asun:"data"`
 	}
 	m3 := Matrix3D{Data: [][][]int64{{{1, 2}, {3, 4}}, {{5, 6, 7}, {8}}}}
-	s, _ = ason.Encode(&m3)
+	s, _ = asun.Encode(&m3)
 	fmt.Printf("   %s\n", s)
 	var m3b Matrix3D
-	if err := ason.Decode(s, &m3b); err != nil {
+	if err := asun.Decode(s, &m3b); err != nil {
 		log.Fatal(err)
 	}
 	if len(m3b.Data) != 2 || len(m3b.Data[0]) != 2 || m3b.Data[0][0][0] != 1 {
@@ -743,7 +743,7 @@ func main() {
 	// 17. Comments
 	fmt.Println("\n17. Comments:")
 	var empComment Employee
-	if err := ason.Decode([]byte("{id,name,dept@{title},skills,active}:/* inline */ (1,Alice,(HR),[rust],true)"), &empComment); err != nil {
+	if err := asun.Decode([]byte("{id,name,dept@{title},skills,active}:/* inline */ (1,Alice,(HR),[rust],true)"), &empComment); err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("   with inline comment: %+v\n", empComment)

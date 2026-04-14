@@ -1,4 +1,4 @@
-package ason
+package asun
 
 import (
 	"bytes"
@@ -7,33 +7,33 @@ import (
 )
 
 type User struct {
-	ID     int64  `ason:"id"`
-	Name   string `ason:"name"`
-	Active bool   `ason:"active"`
+	ID     int64  `asun:"id"`
+	Name   string `asun:"name"`
+	Active bool   `asun:"active"`
 }
 
 type Score struct {
-	ID    int64   `ason:"id"`
-	Value float64 `ason:"value"`
+	ID    int64   `asun:"id"`
+	Value float64 `asun:"value"`
 }
 
 type Item struct {
-	ID    int64   `ason:"id"`
-	Label *string `ason:"label"`
+	ID    int64   `asun:"id"`
+	Label *string `asun:"label"`
 }
 
 type Tagged struct {
-	Name string   `ason:"name"`
-	Tags []string `ason:"tags"`
+	Name string   `asun:"name"`
+	Tags []string `asun:"tags"`
 }
 
 type Note struct {
-	Text string `ason:"text"`
+	Text string `asun:"text"`
 }
 
 type Row struct {
-	ID   int64  `ason:"id"`
-	Name string `ason:"name"`
+	ID   int64  `asun:"id"`
+	Name string `asun:"name"`
 }
 
 func TestSerializeStruct(t *testing.T) {
@@ -145,11 +145,11 @@ func TestArrayField(t *testing.T) {
 
 func TestNestedStruct(t *testing.T) {
 	type Dept struct {
-		Title string `ason:"title"`
+		Title string `asun:"title"`
 	}
 	type Employee struct {
-		Name string `ason:"name"`
-		Dept Dept   `ason:"dept"`
+		Name string `asun:"name"`
+		Dept Dept   `asun:"dept"`
 	}
 	input := "{name,dept@{title}}:(Alice,(Manager))"
 	var e Employee
@@ -293,12 +293,12 @@ func TestFloatField(t *testing.T) {
 
 func TestEntryListField(t *testing.T) {
 	type AttrEntry struct {
-		Key   string `ason:"key"`
-		Value int64  `ason:"value"`
+		Key   string `asun:"key"`
+		Value int64  `asun:"value"`
 	}
 	type EntryItem struct {
-		Name  string      `ason:"name"`
-		Attrs []AttrEntry `ason:"attrs"`
+		Name  string      `asun:"name"`
+		Attrs []AttrEntry `asun:"attrs"`
 	}
 	input := "{name,attrs@[{key,value}]}:(Alice,[(age,30),(score,95)])"
 	var item EntryItem
@@ -345,14 +345,14 @@ func TestAnnotatedVec(t *testing.T) {
 
 func TestAnnotatedNestedStruct(t *testing.T) {
 	type Dept struct {
-		Title  string  `ason:"title"`
-		Budget float64 `ason:"budget"`
+		Title  string  `asun:"title"`
+		Budget float64 `asun:"budget"`
 	}
 	type Employee struct {
-		Name   string `ason:"name"`
-		Age    int64  `ason:"age"`
-		Dept   Dept   `ason:"dept"`
-		Active bool   `ason:"active"`
+		Name   string `asun:"name"`
+		Age    int64  `asun:"age"`
+		Dept   Dept   `asun:"dept"`
+		Active bool   `asun:"active"`
 	}
 	typed := "{name@str,age@int,dept@{title@str,budget@float},active@bool}:(Alice,30,(Engineering,50000.5),true)"
 	untyped := "{name,age,dept@{title,budget},active}:(Alice,30,(Engineering,50000.5),true)"
@@ -373,9 +373,9 @@ func TestAnnotatedNestedStruct(t *testing.T) {
 
 func TestAnnotatedWithArrays(t *testing.T) {
 	type Profile struct {
-		Name   string   `ason:"name"`
-		Scores []int64  `ason:"scores"`
-		Tags   []string `ason:"tags"`
+		Name   string   `asun:"name"`
+		Scores []int64  `asun:"scores"`
+		Tags   []string `asun:"tags"`
 	}
 	typed := "{name@str,scores@[int],tags@[str]}:(Alice,[90,85,92],[rust,go])"
 	untyped := "{name,scores,tags}:(Alice,[90,85,92],[rust,go])"
@@ -396,12 +396,12 @@ func TestAnnotatedWithArrays(t *testing.T) {
 
 func TestAnnotatedWithEntryList(t *testing.T) {
 	type AttrEntry struct {
-		Key   string `ason:"key"`
-		Value int64  `ason:"value"`
+		Key   string `asun:"key"`
+		Value int64  `asun:"value"`
 	}
 	type Config struct {
-		Name  string      `ason:"name"`
-		Attrs []AttrEntry `ason:"attrs"`
+		Name  string      `asun:"name"`
+		Attrs []AttrEntry `asun:"attrs"`
 	}
 	typed := "{name@str,attrs@[{key@str,value@int}]}:(server,[(port,8080),(timeout,30)])"
 	untyped := "{name,attrs@[{key,value}]}:(server,[(port,8080),(timeout,30)])"
@@ -422,15 +422,15 @@ func TestAnnotatedWithEntryList(t *testing.T) {
 
 func TestComplexEntryListRoundtrip(t *testing.T) {
 	type Person struct {
-		Name string `ason:"name"`
-		Age  int64  `ason:"age"`
+		Name string `asun:"name"`
+		Age  int64  `asun:"age"`
 	}
 	type GroupEntry struct {
-		Key   string   `ason:"key"`
-		Value []Person `ason:"value"`
+		Key   string   `asun:"key"`
+		Value []Person `asun:"value"`
 	}
 	type Groups struct {
-		Groups []GroupEntry `ason:"groups"`
+		Groups []GroupEntry `asun:"groups"`
 	}
 	src := Groups{
 		Groups: []GroupEntry{
@@ -453,15 +453,15 @@ func TestComplexEntryListRoundtrip(t *testing.T) {
 
 func TestAnnotatedWithComplexEntryList(t *testing.T) {
 	type Person struct {
-		Name string `ason:"name"`
-		Age  int64  `ason:"age"`
+		Name string `asun:"name"`
+		Age  int64  `asun:"age"`
 	}
 	type GroupEntry struct {
-		Key   string   `ason:"key"`
-		Value []Person `ason:"value"`
+		Key   string   `asun:"key"`
+		Value []Person `asun:"value"`
 	}
 	type Groups struct {
-		Groups []GroupEntry `ason:"groups"`
+		Groups []GroupEntry `asun:"groups"`
 	}
 	typed := "{groups@[{key@str,value@[{name@str,age@int}]}]}:([(teamA,[(Alice,30),(Bob,28)]),(teamB,[(Carol,41)])])"
 	untyped := "{groups@[{key,value@[{name,age}]}]}:([(teamA,[(Alice,30),(Bob,28)]),(teamB,[(Carol,41)])])"
@@ -482,15 +482,15 @@ func TestAnnotatedWithComplexEntryList(t *testing.T) {
 
 func TestEncodeTypedComplexEntryListSchema(t *testing.T) {
 	type Person struct {
-		Name string `ason:"name"`
-		Age  int64  `ason:"age"`
+		Name string `asun:"name"`
+		Age  int64  `asun:"age"`
 	}
 	type GroupEntry struct {
-		Key   string   `ason:"key"`
-		Value []Person `ason:"value"`
+		Key   string   `asun:"key"`
+		Value []Person `asun:"value"`
 	}
 	type Groups struct {
-		Groups []GroupEntry `ason:"groups"`
+		Groups []GroupEntry `asun:"groups"`
 	}
 	src := Groups{
 		Groups: []GroupEntry{
@@ -508,15 +508,15 @@ func TestEncodeTypedComplexEntryListSchema(t *testing.T) {
 
 func TestPrettyTypedComplexEntryListRoundtrip(t *testing.T) {
 	type Person struct {
-		Name string `ason:"name"`
-		Age  int64  `ason:"age"`
+		Name string `asun:"name"`
+		Age  int64  `asun:"age"`
 	}
 	type GroupEntry struct {
-		Key   string   `ason:"key"`
-		Value []Person `ason:"value"`
+		Key   string   `asun:"key"`
+		Value []Person `asun:"value"`
 	}
 	type Groups struct {
-		Groups []GroupEntry `ason:"groups"`
+		Groups []GroupEntry `asun:"groups"`
 	}
 	src := Groups{
 		Groups: []GroupEntry{
@@ -542,15 +542,15 @@ func TestPrettyTypedComplexEntryListRoundtrip(t *testing.T) {
 
 func TestBinaryComplexEntryListRoundtrip(t *testing.T) {
 	type Person struct {
-		Name string `ason:"name"`
-		Age  int64  `ason:"age"`
+		Name string `asun:"name"`
+		Age  int64  `asun:"age"`
 	}
 	type GroupEntry struct {
-		Key   string   `ason:"key"`
-		Value []Person `ason:"value"`
+		Key   string   `asun:"key"`
+		Value []Person `asun:"value"`
 	}
 	type Groups struct {
-		Groups []GroupEntry `ason:"groups"`
+		Groups []GroupEntry `asun:"groups"`
 	}
 	src := Groups{
 		Groups: []GroupEntry{
@@ -573,9 +573,9 @@ func TestBinaryComplexEntryListRoundtrip(t *testing.T) {
 
 func TestAnnotatedWithOptional(t *testing.T) {
 	type Record struct {
-		ID    int64    `ason:"id"`
-		Label *string  `ason:"label"`
-		Score *float64 `ason:"score"`
+		ID    int64    `asun:"id"`
+		Label *string  `asun:"label"`
+		Score *float64 `asun:"score"`
 	}
 	typed := "{id@int,label@str,score@float}:(1,hello,95.5)"
 	untyped := "{id,label,score}:(1,hello,95.5)"
@@ -605,21 +605,21 @@ func TestAnnotatedWithOptional(t *testing.T) {
 
 func TestAnnotatedDeepNesting(t *testing.T) {
 	type Task struct {
-		Title string `ason:"title"`
-		Done  bool   `ason:"done"`
+		Title string `asun:"title"`
+		Done  bool   `asun:"done"`
 	}
 	type Project struct {
-		Name  string `ason:"name"`
-		Tasks []Task `ason:"tasks"`
+		Name  string `asun:"name"`
+		Tasks []Task `asun:"tasks"`
 	}
 	type Team struct {
-		Lead     string    `ason:"lead"`
-		Projects []Project `ason:"projects"`
+		Lead     string    `asun:"lead"`
+		Projects []Project `asun:"projects"`
 	}
 	type Company struct {
-		Name    string  `ason:"name"`
-		Revenue float64 `ason:"revenue"`
-		Team    Team    `ason:"team"`
+		Name    string  `asun:"name"`
+		Revenue float64 `asun:"revenue"`
+		Team    Team    `asun:"team"`
 	}
 	typed := "{name@str,revenue@float,team@{lead@str,projects@[{name@str,tasks@[{title@str,done@bool}]}]}}:(Acme,500.5,(Alice,[(API,[(Design,true),(Code,false)])]))"
 	untyped := "{name,revenue,team@{lead,projects@[{name,tasks@[{title,done}]}]}}:(Acme,500.5,(Alice,[(API,[(Design,true),(Code,false)])]))"
@@ -646,10 +646,10 @@ func TestAnnotatedDeepNesting(t *testing.T) {
 
 func TestAnnotatedMixedPartial(t *testing.T) {
 	type Mixed struct {
-		ID     int64   `ason:"id"`
-		Name   string  `ason:"name"`
-		Score  float64 `ason:"score"`
-		Active bool    `ason:"active"`
+		ID     int64   `asun:"id"`
+		Name   string  `asun:"name"`
+		Score  float64 `asun:"score"`
+		Active bool    `asun:"active"`
 	}
 	partial := "{id@int,name,score@float,active}:(1,Alice,95.5,true)"
 	full := "{id@int,name@str,score@float,active@bool}:(1,Alice,95.5,true)"
@@ -710,9 +710,9 @@ func TestEncodeTypedRoundtrip(t *testing.T) {
 
 func TestEncodeTypedFloats(t *testing.T) {
 	type ScoreF struct {
-		ID    int64   `ason:"id"`
-		Value float64 `ason:"value"`
-		Label string  `ason:"label"`
+		ID    int64   `asun:"id"`
+		Value float64 `asun:"value"`
+		Label string  `asun:"label"`
 	}
 	s := ScoreF{ID: 1, Value: 95.5, Label: "good"}
 	got, err := EncodeTyped(s)
@@ -727,11 +727,11 @@ func TestEncodeTypedFloats(t *testing.T) {
 
 func TestEncodeTypedAllPrimitives(t *testing.T) {
 	type All struct {
-		B bool    `ason:"b"`
-		I int64   `ason:"i"`
-		U uint32  `ason:"u"`
-		F float64 `ason:"f"`
-		S string  `ason:"s"`
+		B bool    `asun:"b"`
+		I int64   `asun:"i"`
+		U uint32  `asun:"u"`
+		F float64 `asun:"f"`
+		S string  `asun:"s"`
 	}
 	val := All{B: true, I: -42, U: 100, F: 3.14, S: "hello"}
 	got, err := EncodeTyped(val)
@@ -746,9 +746,9 @@ func TestEncodeTypedAllPrimitives(t *testing.T) {
 
 func TestEncodeTypedOptional(t *testing.T) {
 	type Opt struct {
-		ID    int64    `ason:"id"`
-		Label *string  `ason:"label"`
-		Score *float64 `ason:"score"`
+		ID    int64    `asun:"id"`
+		Label *string  `asun:"label"`
+		Score *float64 `asun:"score"`
 	}
 	hello := "hello"
 	sc := 95.5
@@ -772,12 +772,12 @@ func TestEncodeTypedOptional(t *testing.T) {
 
 func TestEncodeTypedNestedStruct(t *testing.T) {
 	type Dept struct {
-		Title string `ason:"title"`
+		Title string `asun:"title"`
 	}
 	type Employee struct {
-		Name   string `ason:"name"`
-		Dept   Dept   `ason:"dept"`
-		Active bool   `ason:"active"`
+		Name   string `asun:"name"`
+		Dept   Dept   `asun:"dept"`
+		Active bool   `asun:"active"`
 	}
 	e := Employee{Name: "Alice", Dept: Dept{Title: "Engineering"}, Active: true}
 	got, err := EncodeTyped(e)
@@ -792,9 +792,9 @@ func TestEncodeTypedNestedStruct(t *testing.T) {
 
 func TestEncodeTypedVec(t *testing.T) {
 	type RowT struct {
-		ID    int64   `ason:"id"`
-		Name  string  `ason:"name"`
-		Score float64 `ason:"score"`
+		ID    int64   `asun:"id"`
+		Name  string  `asun:"name"`
+		Score float64 `asun:"score"`
 	}
 	rows := []RowT{
 		{ID: 1, Name: "Alice", Score: 95.5},
@@ -828,8 +828,8 @@ func TestEncodeTypedVec(t *testing.T) {
 
 func TestPrettyFormatSimple(t *testing.T) {
 	type User struct {
-		Name string `ason:"name"`
-		Age  int    `ason:"age"`
+		Name string `asun:"name"`
+		Age  int    `asun:"age"`
 	}
 	u := User{Name: "Alice", Age: 30}
 	p, err := EncodePretty(u)
@@ -845,21 +845,21 @@ func TestPrettyFormatSimple(t *testing.T) {
 
 func TestPrettyFormatComplex(t *testing.T) {
 	type Contact struct {
-		Email string `ason:"email"`
-		Phone string `ason:"phone"`
+		Email string `asun:"email"`
+		Phone string `asun:"phone"`
 	}
 	type Addr struct {
-		City    string `ason:"city"`
-		Zip     int    `ason:"zip"`
-		Country string `ason:"country"`
+		City    string `asun:"city"`
+		Zip     int    `asun:"zip"`
+		Country string `asun:"country"`
 	}
 	type User struct {
-		Id      int      `ason:"id"`
-		Name    string   `ason:"name"`
-		Active  bool     `ason:"active"`
-		Contact Contact  `ason:"contact"`
-		Addr    Addr     `ason:"addr"`
-		Tags    []string `ason:"tags"`
+		Id      int      `asun:"id"`
+		Name    string   `asun:"name"`
+		Active  bool     `asun:"active"`
+		Contact Contact  `asun:"contact"`
+		Addr    Addr     `asun:"addr"`
+		Tags    []string `asun:"tags"`
 	}
 
 	u := User{
@@ -893,8 +893,8 @@ func TestPrettyFormatComplex(t *testing.T) {
 
 func TestPrettyFormatArray(t *testing.T) {
 	type Row struct {
-		Id   int    `ason:"id"`
-		Name string `ason:"name"`
+		Id   int    `asun:"id"`
+		Name string `asun:"name"`
 	}
 	rows := []Row{{Id: 1, Name: "Alice"}, {Id: 2, Name: "Bob"}}
 	p, err := EncodePretty(rows)
@@ -917,8 +917,8 @@ func TestPrettyFormatArray(t *testing.T) {
 
 func TestPrettyFormatTyped(t *testing.T) {
 	type User struct {
-		Name string `ason:"name"`
-		Age  int    `ason:"age"`
+		Name string `asun:"name"`
+		Age  int    `asun:"age"`
 	}
 	u := User{Name: "Alice", Age: 30}
 	p, err := EncodePrettyTyped(u)
@@ -1083,9 +1083,9 @@ func TestPrettyRoundtripSlice(t *testing.T) {
 
 func TestPrettyRoundtripScore(t *testing.T) {
 	type ScoreRow struct {
-		ID    int64   `ason:"id"`
-		Value float64 `ason:"value"`
-		Label string  `ason:"label"`
+		ID    int64   `asun:"id"`
+		Value float64 `asun:"value"`
+		Label string  `asun:"label"`
 	}
 	rows := []ScoreRow{{1, 95.5, "excellent"}, {2, 72.3, "good"}, {3, 40.0, "fail"}}
 	p, err := EncodePretty(rows)
@@ -1103,13 +1103,13 @@ func TestPrettyRoundtripScore(t *testing.T) {
 
 func TestPrettyRoundtripNestedStruct(t *testing.T) {
 	type Addr struct {
-		City    string `ason:"city"`
-		Country string `ason:"country"`
+		City    string `asun:"city"`
+		Country string `asun:"country"`
 	}
 	type Person struct {
-		ID   int64  `ason:"id"`
-		Name string `ason:"name"`
-		Addr Addr   `ason:"addr"`
+		ID   int64  `asun:"id"`
+		Name string `asun:"name"`
+		Addr Addr   `asun:"addr"`
 	}
 	p1 := Person{ID: 1, Name: "Alice", Addr: Addr{City: "New York", Country: "US"}}
 	out, err := EncodePretty(p1)
@@ -1162,18 +1162,18 @@ func TestPrettyRoundtripLargeSlice(t *testing.T) {
 // ─── Typed primitive slice fields ────────────────────────────────────────────
 
 type WithBoolSlice struct {
-	Name  string `ason:"name"`
-	Flags []bool `ason:"flags"`
+	Name  string `asun:"name"`
+	Flags []bool `asun:"flags"`
 }
 
 type WithIntSlice struct {
-	Name string  `ason:"name"`
-	Nums []int64 `ason:"nums"`
+	Name string  `asun:"name"`
+	Nums []int64 `asun:"nums"`
 }
 
 type WithStrSlice struct {
-	Name string   `ason:"name"`
-	Tags []string `ason:"tags"`
+	Name string   `asun:"name"`
+	Tags []string `asun:"tags"`
 }
 
 func TestEncodeTypedBoolSliceField(t *testing.T) {
@@ -1254,15 +1254,15 @@ func TestEncodePrettyTypedBoolSliceField(t *testing.T) {
 // ─── Field names with +/- in decode ─────────────────────────────────────────
 
 type PlusMinusFields struct {
-	LowPriority string `ason:"lowPriorityEIR+CIR"`
-	AB          string `ason:"a-b"`
-	Name        string `ason:"name"`
+	LowPriority string `asun:"lowPriorityEIR+CIR"`
+	AB          string `asun:"a-b"`
+	Name        string `asun:"name"`
 }
 
 type QuotedSchemaFields struct {
-	IDUUID  int64  `ason:"id uuid"`
-	Numeric string `ason:"65"`
-	Special bool   `ason:"{}[]@\""`
+	IDUUID  int64  `asun:"id uuid"`
+	Numeric string `asun:"65"`
+	Special bool   `asun:"{}[]@\""`
 }
 
 func TestDecodeFieldNamesWithPlusMinus(t *testing.T) {
@@ -1376,10 +1376,10 @@ func TestDecodeQuotedSchemaFieldNames(t *testing.T) {
 
 func TestDecodeRejectsInvalidSchemaTypes(t *testing.T) {
 	var out struct {
-		ID    int64   `ason:"id"`
-		Name  string  `ason:"name"`
-		Score float64 `ason:"score"`
-		Alive bool    `ason:"alive"`
+		ID    int64   `asun:"id"`
+		Name  string  `asun:"name"`
+		Score float64 `asun:"score"`
+		Alive bool    `asun:"alive"`
 	}
 
 	for _, input := range []string{

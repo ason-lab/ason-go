@@ -1,4 +1,4 @@
-package ason
+package asun
 
 import "fmt"
 
@@ -8,7 +8,7 @@ type MarshalError struct {
 }
 
 func (e *MarshalError) Error() string {
-	return "ason: marshal error: " + e.Message
+	return "asun: marshal error: " + e.Message
 }
 
 // UnmarshalError is returned when deserialization fails.
@@ -18,5 +18,5 @@ type UnmarshalError struct {
 }
 
 func (e *UnmarshalError) Error() string {
-	return fmt.Sprintf("ason: unmarshal error at pos %d: %s", e.Pos, e.Message)
+	return fmt.Sprintf("asun: unmarshal error at pos %d: %s", e.Pos, e.Message)
 }

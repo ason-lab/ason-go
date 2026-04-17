@@ -3,9 +3,9 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.24+-00ADD8.svg)](https://go.dev)
 
-High-performance Go support for [ASUN](https://github.com/asun-lab/asun), a schema-driven format for compact structured data.
+High-performance Go support for [ASUN](https://github.com/asunLab/asun), a schema-driven format for compact structured data.
 
-[中文文档](README_CN.md)
+[中文文档](https://github.com/asunLab/asun-go/blob/main/README_CN.md)
 
 ## Why ASUN
 
@@ -18,8 +18,10 @@ ASUN writes field names once and stores rows positionally:
 ]
 ```
 
-```text
-[{id@int,name@str,active@bool}]:(1,Alice,true),(2,Bob,false)
+```asun
+[{id,name,active}]:
+    (1,Alice,true),
+    (2,Bob,false)
 ```
 
 That reduces repeated keys, payload size, and often parsing cost.
@@ -36,7 +38,7 @@ That reduces repeated keys, payload size, and often parsing cost.
 ## Install
 
 ```bash
-go get github.com/asun-lab/asun-go
+go get github.com/asunLab/asun-go
 ```
 
 ## Quick Start
@@ -46,7 +48,7 @@ package main
 
 import (
     "fmt"
-    asun "github.com/asun-lab/asun-go"
+    asun "github.com/asunLab/asun-go"
 )
 
 type User struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	asun "github.com/asun-lab/asun-go"
+	asun "github.com/asunLab/asun-go"
 )
 
 type User struct {

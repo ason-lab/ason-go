@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/go-1.24+-00ADD8.svg)](https://go.dev)
 
-面向 [ASUN](https://github.com/asun-lab/asun) 的高性能 Go 实现。ASUN 是一种适合紧凑结构化数据的 Schema 驱动格式。
+面向 [ASUN](https://github.com/asunLab/asun) 的高性能 Go 实现。ASUN 是一种适合紧凑结构化数据的 Schema 驱动格式。
 
 [English](README.md)
 
@@ -35,7 +35,7 @@ ASUN 只写一次字段名，后续数据按位置存储：
 ## 安装
 
 ```bash
-go get github.com/asun-lab/asun-go
+go get github.com/asunLab/asun-go
 ```
 
 ## 快速开始
@@ -45,7 +45,7 @@ package main
 
 import (
     "fmt"
-    asun "github.com/asun-lab/asun-go"
+    asun "github.com/asunLab/asun-go"
 )
 
 type User struct {

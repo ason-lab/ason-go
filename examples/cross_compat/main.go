@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/asun-lab/asun-go"
+	"github.com/asunLab/asun-go"
 )
 
 type User struct {

@@ -66,7 +66,7 @@ var bufPool = sync.Pool{
 var noMapTypeCache sync.Map // map[reflect.Type]bool
 
 var errMapFieldsUnsupported = &MarshalError{
-	Message: "map fields are no longer supported; model key-value data as a slice of entry structs",
+	Message: "map fields are not supported",
 }
 
 func getBuf() *[]byte {

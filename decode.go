@@ -414,9 +414,6 @@ func scanSchemaEnd(data []byte, pos int) (int, error) {
 			}
 		}
 		pos = skipInlineWhitespace(data, pos)
-		if pos < len(data) && data[pos] == ':' {
-			return 0, &UnmarshalError{pos, "legacy ':' field annotations are not supported; use '@'"}
-		}
 		if pos < len(data) && data[pos] == '@' {
 			pos++
 			pos = skipInlineWhitespace(data, pos)
@@ -502,10 +499,6 @@ func (d *decoder) parseSchema() ([]string, string, error) {
 			name = unsafeString(d.data[start:d.pos])
 		}
 		d.skipWhitespace()
-
-		if d.pos < len(d.data) && d.data[d.pos] == ':' {
-			return nil, "", d.errorf("legacy ':' field annotations are not supported; use '@'")
-		}
 
 		// Validate and skip optional type annotation after '@'
 		if d.pos < len(d.data) && d.data[d.pos] == '@' {
@@ -902,7 +895,7 @@ func (d *decoder) unmarshalValue(fv reflect.Value) error {
 		return d.unmarshalSlice(fv)
 
 	case reflect.Map:
-		return d.errorf("map fields are no longer supported; use a slice of entry structs")
+		return d.errorf("map fields are not supported")
 
 	case reflect.Struct:
 		return d.unmarshalNestedStruct(fv)

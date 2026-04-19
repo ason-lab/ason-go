@@ -158,7 +158,7 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		}
 		return data, nil
 	case reflect.Map:
-		return data, &UnmarshalError{Pos: 0, Message: "map fields are no longer supported; use a slice of entry structs"}
+		return data, &UnmarshalError{Pos: 0, Message: "map fields are not supported"}
 	case reflect.Struct:
 		si := getStructInfo(rv.Type())
 		var err error

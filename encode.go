@@ -15,7 +15,7 @@ import (
 // needsQuote[b] is true if byte b forces a string to be wrapped in "..."
 var needsQuote = func() [256]bool {
 	var t [256]bool
-	for i := 0; i < 32; i++ {
+	for i := 0; i < 33; i++ { // 0x00..=0x1f plus 0x20 (space)
 		t[i] = true
 	}
 	t[','] = true
@@ -24,8 +24,16 @@ var needsQuote = func() [256]bool {
 	t[')'] = true
 	t['['] = true
 	t[']'] = true
+	t['{'] = true
+	t['}'] = true
+	t[':'] = true
+	t['<'] = true
+	t['>'] = true
+	t['/'] = true
+	t['*'] = true
 	t['"'] = true
 	t['\\'] = true
+	t[0x7f] = true
 	return t
 }()
 
@@ -36,7 +44,10 @@ var escapeChar = func() [256]byte {
 	t['"'] = '"'
 	t['\\'] = '\\'
 	t['\n'] = 'n'
+	t['\r'] = 'r'
 	t['\t'] = 't'
+	t[0x08] = 'b'
+	t[0x0c] = 'f'
 	return t
 }()
 
@@ -199,6 +210,60 @@ func appendFloatGeneral(buf []byte, v float64) []byte {
 }
 
 // ---------------------------------------------------------------------------
+// Untyped value encoding (scalar / slice / map / interface)
+// ---------------------------------------------------------------------------
+
+// appendUntyped writes v in untyped ASUN form: scalars bare, plain arrays
+// as [a,b,c], maps are rejected, null becomes `()` (the untyped null marker).
+func appendUntyped(buf []byte, rv reflect.Value) ([]byte, error) {
+	if !rv.IsValid() {
+		return append(buf, '(', ')'), nil
+	}
+	for rv.Kind() == reflect.Interface || rv.Kind() == reflect.Ptr {
+		if rv.IsNil() {
+			return append(buf, '(', ')'), nil
+		}
+		rv = rv.Elem()
+	}
+	switch rv.Kind() {
+	case reflect.Bool:
+		if rv.Bool() {
+			return append(buf, "true"...), nil
+		}
+		return append(buf, "false"...), nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return appendI64(buf, rv.Int()), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return appendU64(buf, rv.Uint()), nil
+	case reflect.Float32, reflect.Float64:
+		return appendFloat64(buf, rv.Float()), nil
+	case reflect.String:
+		return appendStr(buf, rv.String()), nil
+	case reflect.Slice, reflect.Array:
+		buf = append(buf, '[')
+		n := rv.Len()
+		for i := 0; i < n; i++ {
+			if i > 0 {
+				buf = append(buf, ',')
+			}
+			var err error
+			buf, err = appendUntyped(buf, rv.Index(i))
+			if err != nil {
+				return buf, err
+			}
+		}
+		buf = append(buf, ']')
+		return buf, nil
+	case reflect.Map:
+		return buf, &MarshalError{"map encoding is not supported"}
+	case reflect.Struct:
+		// Should be handled by the typed path; fall through as an error here.
+		return buf, &MarshalError{"struct in untyped path is unexpected"}
+	}
+	return buf, &MarshalError{"unsupported untyped value kind: " + rv.Kind().String()}
+}
+
+// ---------------------------------------------------------------------------
 // String quoting / escaping
 // ---------------------------------------------------------------------------
 
@@ -207,40 +272,57 @@ func stringNeedsQuoting(s string) bool {
 		return true
 	}
 	b := unsafe.Slice(unsafe.StringData(s), len(s))
-	if b[0] == ' ' || b[len(b)-1] == ' ' {
+	first := b[0]
+	last := b[len(b)-1]
+	if first == ' ' || first == '\t' || first == '\n' || first == '\r' ||
+		last == ' ' || last == '\t' || last == '\n' || last == '\r' {
 		return true
 	}
-	if s == "true" || s == "false" {
+	if s == "true" || s == "false" || s == "True" || s == "False" || s == "TRUE" || s == "FALSE" {
 		return true
-	}
-	couldBeNumber := true
-	numStart := 0
-	if b[0] == '-' {
-		numStart = 1
-	}
-	if numStart >= len(b) {
-		couldBeNumber = false
 	}
 	for i := 0; i < len(b); i++ {
 		if needsQuote[b[i]] {
 			return true
 		}
-		if couldBeNumber && i >= numStart && !(b[i] >= '0' && b[i] <= '9') && b[i] != '.' {
-			couldBeNumber = false
+	}
+	// Number-like prefix forces quoting.
+	c0 := b[0]
+	if c0 >= '0' && c0 <= '9' {
+		return true
+	}
+	if (c0 == '-' || c0 == '+') && len(b) >= 2 {
+		c1 := b[1]
+		if c1 >= '0' && c1 <= '9' {
+			return true
 		}
 	}
-	return couldBeNumber && len(b) > numStart
+	if c0 == '.' && len(b) >= 2 {
+		c1 := b[1]
+		if c1 >= '0' && c1 <= '9' {
+			return true
+		}
+	}
+	return false
 }
 
 func appendEscaped(buf []byte, s string) []byte {
 	buf = append(buf, '"')
 	b := unsafe.Slice(unsafe.StringData(s), len(s))
+	const hex = "0123456789abcdef"
 	start := 0
 	for i := 0; i < len(b); i++ {
-		esc := escapeChar[b[i]]
+		c := b[i]
+		esc := escapeChar[c]
 		if esc != 0 {
 			buf = append(buf, b[start:i]...)
 			buf = append(buf, '\\', esc)
+			start = i + 1
+			continue
+		}
+		if c < 0x20 || c == 0x7f {
+			buf = append(buf, b[start:i]...)
+			buf = append(buf, '\\', 'u', '0', '0', hex[c>>4], hex[c&0xf])
 			start = i + 1
 		}
 	}
@@ -586,7 +668,20 @@ func encodeInner(v any, typed bool) ([]byte, error) {
 		}
 	}
 	if rv.Kind() != reflect.Struct {
-		return nil, &MarshalError{"Encode requires a struct or slice of structs"}
+		// Untyped fallback: scalar / plain slice / interface / map.
+		bp := getBuf()
+		buf := *bp
+		buf, err := appendUntyped(buf, rv)
+		if err != nil {
+			*bp = buf
+			putBuf(bp)
+			return nil, err
+		}
+		out := make([]byte, len(buf))
+		copy(out, buf)
+		*bp = buf
+		putBuf(bp)
+		return out, nil
 	}
 	if err := ensureNoMapType(rv.Type()); err != nil {
 		return nil, err

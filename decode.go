@@ -27,8 +27,41 @@ func Decode(data []byte, v any) error {
 	// Detect target type and input format
 	rv := reflect.ValueOf(v)
 	isSliceTarget := rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Slice
+	isAnyTarget := rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Interface
 	startsWithBracket := d.pos < len(d.data) && d.data[d.pos] == '[' &&
 		d.pos+1 < len(d.data) && d.data[d.pos+1] == '{'
+
+	// Untyped target: bare value / plain array. SPEC §8.3 forbids top-level
+	// `(...)` without a schema header.
+	if isAnyTarget && !startsWithBracket {
+		if d.pos < len(d.data) && d.data[d.pos] == '{' {
+			return &UnmarshalError{d.pos, "schema header requires a typed target"}
+		}
+		if d.pos < len(d.data) && d.data[d.pos] == '(' {
+			// `()` is the untyped null marker; longer bare tuples remain
+			// an error per SPEC §8.3.
+			if d.pos+1 < len(d.data) && d.data[d.pos+1] == ')' {
+				d.pos += 2
+				d.skipWhitespaceAndComments()
+				if d.pos < len(d.data) {
+					return &UnmarshalError{d.pos, "trailing characters after decoded value"}
+				}
+				// Leave the interface as zero-value (nil).
+				return nil
+			}
+			return &UnmarshalError{d.pos, "bare tuple at top level — schema required"}
+		}
+		val, err := d.parseAnyValue()
+		if err != nil {
+			return err
+		}
+		d.skipWhitespaceAndComments()
+		if d.pos < len(d.data) {
+			return &UnmarshalError{d.pos, "trailing characters after decoded value"}
+		}
+		rv.Elem().Set(reflect.ValueOf(val))
+		return nil
+	}
 
 	// Strict format enforcement: slices require [{...}]:, structs require {...}:
 	if isSliceTarget && !startsWithBracket {
@@ -1155,6 +1188,12 @@ func (d *decoder) parseQuotedString() (string, error) {
 				buf = append(buf, '\n')
 			case 't':
 				buf = append(buf, '\t')
+			case 'r':
+				buf = append(buf, '\r')
+			case 'b':
+				buf = append(buf, '\b')
+			case 'f':
+				buf = append(buf, '\f')
 			case ',':
 				buf = append(buf, ',')
 			case '(':
@@ -1165,12 +1204,18 @@ func (d *decoder) parseQuotedString() (string, error) {
 				buf = append(buf, '[')
 			case ']':
 				buf = append(buf, ']')
+			case '{':
+				buf = append(buf, '{')
+			case '}':
+				buf = append(buf, '}')
 			case '<':
 				buf = append(buf, '<')
 			case '>':
 				buf = append(buf, '>')
 			case ':':
 				buf = append(buf, ':')
+			case '@':
+				buf = append(buf, '@')
 			case 'u':
 				if d.pos+4 > len(d.data) {
 					return "", d.errorf("invalid unicode escape")
@@ -1227,6 +1272,18 @@ func unescapePlain(raw []byte) (string, error) {
 				buf = append(buf, '\n')
 			case 't':
 				buf = append(buf, '\t')
+			case 'r':
+				buf = append(buf, '\r')
+			case 'b':
+				buf = append(buf, '\b')
+			case 'f':
+				buf = append(buf, '\f')
+			case '{':
+				buf = append(buf, '{')
+			case '}':
+				buf = append(buf, '}')
+			case '@':
+				buf = append(buf, '@')
 			case 'u':
 				if i+4 >= len(raw) {
 					return "", &UnmarshalError{Message: "invalid unicode escape"}
@@ -1292,6 +1349,11 @@ func (d *decoder) parseAnyValue() (any, error) {
 		}
 		return arr, nil
 	case b == '(':
+		// `()` is the untyped null marker.
+		if d.pos+1 < len(d.data) && d.data[d.pos+1] == ')' {
+			d.pos += 2
+			return nil, nil
+		}
 		// tuple
 		d.pos++
 		var arr []any
@@ -1341,16 +1403,58 @@ func (d *decoder) parseNumberAny() (any, error) {
 	if d.pos < len(d.data) && d.data[d.pos] == '-' {
 		d.pos++
 	}
+	digitStart := d.pos
 	for d.pos < len(d.data) && d.data[d.pos] >= '0' && d.data[d.pos] <= '9' {
 		d.pos++
 	}
+	if d.pos == digitStart {
+		// '-' with no digits — fall back to plain string (e.g. "-foo").
+		d.pos = start
+		return d.parsePlainValue()
+	}
 	isFloat := false
+	// ABNF: integer part already required ≥1 digit. The fractional part, if
+	// present, also requires ≥1 digit; tokens like "5." fall through to
+	// plain-string per the type-priority cascade.
 	if d.pos < len(d.data) && d.data[d.pos] == '.' {
-		isFloat = true
+		dotPos := d.pos
 		d.pos++
+		fracStart := d.pos
 		for d.pos < len(d.data) && d.data[d.pos] >= '0' && d.data[d.pos] <= '9' {
 			d.pos++
 		}
+		if d.pos == fracStart {
+			// "5." → not a number; rewind to before '.' so atValueEnd can
+			// reject it and we fall through to plain-string.
+			d.pos = dotPos
+		} else {
+			isFloat = true
+		}
+	}
+	// Scientific notation: ["e"/"E"] ["+"/"-"] 1*DIGIT — required exponent
+	// digits per the extended ABNF.
+	if d.pos < len(d.data) && (d.data[d.pos] == 'e' || d.data[d.pos] == 'E') {
+		expMark := d.pos
+		d.pos++
+		if d.pos < len(d.data) && (d.data[d.pos] == '+' || d.data[d.pos] == '-') {
+			d.pos++
+		}
+		expStart := d.pos
+		for d.pos < len(d.data) && d.data[d.pos] >= '0' && d.data[d.pos] <= '9' {
+			d.pos++
+		}
+		if d.pos == expStart {
+			// "1e" / "1e+" → not a number; rewind so it falls through.
+			d.pos = expMark
+		} else {
+			isFloat = true
+		}
+	}
+	// SPEC §8.1: digits followed by non-delimiter chars (e.g. "123abc") are
+	// a plain string, not a number error.
+	if !d.atValueEnd() {
+		d.pos = start
+		return d.parsePlainValue()
 	}
 	s := unsafeString(d.data[start:d.pos])
 	if isFloat {

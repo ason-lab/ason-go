@@ -766,11 +766,21 @@ func encodeSliceInner(v any, typed bool) ([]byte, error) {
 
 func marshalStruct(buf []byte, rv reflect.Value, si *structInfo) ([]byte, error) {
 	buf = append(buf, '(')
-	for i, fi := range si.fields {
+	for i := range si.fields {
 		if i > 0 {
 			buf = append(buf, ',')
 		}
-		fv := rv.FieldByIndex(fi.index)
+		fi := &si.fields[i]
+		// Fast path: top-level (non-embedded) field — direct index lookup.
+		// `FieldByIndex` allocates and walks even when the slice has length 1,
+		// dominating struct encoding when called per-row × per-field. The
+		// `direct` cache mirrors what `fieldByInfo` does on the decode side.
+		var fv reflect.Value
+		if fi.direct >= 0 {
+			fv = rv.Field(fi.direct)
+		} else {
+			fv = rv.FieldByIndex(fi.index)
+		}
 		var err error
 		buf, err = marshalNestedValue(buf, fv)
 		if err != nil {

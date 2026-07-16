@@ -7,6 +7,26 @@ import (
 	"sync"
 )
 
+// appendUvarint appends v as an LEB128 unsigned varint.
+func appendUvarint(buf []byte, v uint64) []byte {
+	for v >= 0x80 {
+		buf = append(buf, byte(v)|0x80)
+		v >>= 7
+	}
+	return append(buf, byte(v))
+}
+
+// zigzagEncode maps a signed integer to an unsigned one so that small
+// magnitudes (positive or negative) encode into few varint bytes.
+func zigzagEncode(v int64) uint64 {
+	return uint64((v << 1) ^ (v >> 63))
+}
+
+// appendIvarint appends v as zigzag + LEB128 signed varint.
+func appendIvarint(buf []byte, v int64) []byte {
+	return appendUvarint(buf, zigzagEncode(v))
+}
+
 var binBufPool = sync.Pool{
 	New: func() any {
 		b := make([]byte, 0, 128)
@@ -67,25 +87,13 @@ func marshalBinValue(buf []byte, rv reflect.Value) ([]byte, error) {
 		return append(buf, 0), nil
 	case reflect.Int8:
 		return append(buf, byte(rv.Int())), nil
-	case reflect.Int16:
-		buf = binary.LittleEndian.AppendUint16(buf, uint16(rv.Int()))
-		return buf, nil
-	case reflect.Int32:
-		buf = binary.LittleEndian.AppendUint32(buf, uint32(rv.Int()))
-		return buf, nil
-	case reflect.Int, reflect.Int64:
-		buf = binary.LittleEndian.AppendUint64(buf, uint64(rv.Int()))
+	case reflect.Int16, reflect.Int32, reflect.Int, reflect.Int64:
+		buf = appendIvarint(buf, rv.Int())
 		return buf, nil
 	case reflect.Uint8:
 		return append(buf, byte(rv.Uint())), nil
-	case reflect.Uint16:
-		buf = binary.LittleEndian.AppendUint16(buf, uint16(rv.Uint()))
-		return buf, nil
-	case reflect.Uint32:
-		buf = binary.LittleEndian.AppendUint32(buf, uint32(rv.Uint()))
-		return buf, nil
-	case reflect.Uint, reflect.Uint64:
-		buf = binary.LittleEndian.AppendUint64(buf, uint64(rv.Uint()))
+	case reflect.Uint16, reflect.Uint32, reflect.Uint, reflect.Uint64:
+		buf = appendUvarint(buf, rv.Uint())
 		return buf, nil
 	case reflect.Float32:
 		buf = binary.LittleEndian.AppendUint32(buf, math.Float32bits(float32(rv.Float())))
@@ -95,18 +103,18 @@ func marshalBinValue(buf []byte, rv reflect.Value) ([]byte, error) {
 		return buf, nil
 	case reflect.String:
 		s := rv.String()
-		buf = binary.LittleEndian.AppendUint32(buf, uint32(len(s)))
+		buf = appendUvarint(buf, uint64(len(s)))
 		buf = append(buf, s...)
 		return buf, nil
 	case reflect.Slice:
 		if rv.Type().Elem().Kind() == reflect.Uint8 {
 			b := rv.Bytes()
-			buf = binary.LittleEndian.AppendUint32(buf, uint32(len(b)))
+			buf = appendUvarint(buf, uint64(len(b)))
 			buf = append(buf, b...)
 			return buf, nil
 		}
 		n := rv.Len()
-		buf = binary.LittleEndian.AppendUint32(buf, uint32(n))
+		buf = appendUvarint(buf, uint64(n))
 		for i := 0; i < n; i++ {
 			var err error
 			buf, err = marshalBinValue(buf, rv.Index(i))
@@ -117,7 +125,7 @@ func marshalBinValue(buf []byte, rv reflect.Value) ([]byte, error) {
 		return buf, nil
 	case reflect.Array:
 		n := rv.Len()
-		buf = binary.LittleEndian.AppendUint32(buf, uint32(n))
+		buf = appendUvarint(buf, uint64(n))
 		for i := 0; i < n; i++ {
 			var err error
 			buf, err = marshalBinValue(buf, rv.Index(i))

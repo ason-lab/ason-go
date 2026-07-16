@@ -7,6 +7,41 @@ import (
 	"unsafe"
 )
 
+// readUvarint reads an LEB128 unsigned varint from data.
+// It returns the value and the remaining slice, or an error on EOF/overflow.
+func readUvarint(data []byte) (uint64, []byte, error) {
+	var result uint64
+	var shift uint
+	for i := 0; ; i++ {
+		if i >= len(data) {
+			return 0, data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading varint"}
+		}
+		b := data[i]
+		if shift >= 64 {
+			return 0, data, &UnmarshalError{Pos: 0, Message: "varint overflow"}
+		}
+		result |= uint64(b&0x7f) << shift
+		if b&0x80 == 0 {
+			return result, data[i+1:], nil
+		}
+		shift += 7
+	}
+}
+
+// zigzagDecode reverses zigzagEncode.
+func zigzagDecode(v uint64) int64 {
+	return int64(v>>1) ^ -int64(v&1)
+}
+
+// readIvarint reads a zigzag + LEB128 signed varint from data.
+func readIvarint(data []byte) (int64, []byte, error) {
+	u, rest, err := readUvarint(data)
+	if err != nil {
+		return 0, data, err
+	}
+	return zigzagDecode(u), rest, nil
+}
+
 // DecodeBinary deserializes ASUN-BIN format into a Go value.
 // It uses zero-copy for strings where possible.
 func DecodeBinary(data []byte, v any) error {
@@ -32,48 +67,26 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		}
 		rv.SetInt(int64(int8(data[0])))
 		return data[1:], nil
-	case reflect.Int16:
-		if len(data) < 2 {
-			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading int16"}
+	case reflect.Int16, reflect.Int32, reflect.Int, reflect.Int64:
+		v, rest, err := readIvarint(data)
+		if err != nil {
+			return data, err
 		}
-		rv.SetInt(int64(int16(binary.LittleEndian.Uint16(data))))
-		return data[2:], nil
-	case reflect.Int32:
-		if len(data) < 4 {
-			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading int32"}
-		}
-		rv.SetInt(int64(int32(binary.LittleEndian.Uint32(data))))
-		return data[4:], nil
-	case reflect.Int, reflect.Int64:
-		if len(data) < 8 {
-			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading int64"}
-		}
-		rv.SetInt(int64(binary.LittleEndian.Uint64(data)))
-		return data[8:], nil
+		rv.SetInt(v)
+		return rest, nil
 	case reflect.Uint8:
 		if len(data) < 1 {
 			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading uint8"}
 		}
 		rv.SetUint(uint64(data[0]))
 		return data[1:], nil
-	case reflect.Uint16:
-		if len(data) < 2 {
-			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading uint16"}
+	case reflect.Uint16, reflect.Uint32, reflect.Uint, reflect.Uint64:
+		v, rest, err := readUvarint(data)
+		if err != nil {
+			return data, err
 		}
-		rv.SetUint(uint64(binary.LittleEndian.Uint16(data)))
-		return data[2:], nil
-	case reflect.Uint32:
-		if len(data) < 4 {
-			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading uint32"}
-		}
-		rv.SetUint(uint64(binary.LittleEndian.Uint32(data)))
-		return data[4:], nil
-	case reflect.Uint, reflect.Uint64:
-		if len(data) < 8 {
-			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading uint64"}
-		}
-		rv.SetUint(binary.LittleEndian.Uint64(data))
-		return data[8:], nil
+		rv.SetUint(v)
+		return rest, nil
 	case reflect.Float32:
 		if len(data) < 4 {
 			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading float32"}
@@ -87,11 +100,12 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		rv.SetFloat(math.Float64frombits(binary.LittleEndian.Uint64(data)))
 		return data[8:], nil
 	case reflect.String:
-		if len(data) < 4 {
+		nn, rest, err := readUvarint(data)
+		if err != nil {
 			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading string length"}
 		}
-		n := int(binary.LittleEndian.Uint32(data))
-		data = data[4:]
+		n := int(nn)
+		data = rest
 		if len(data) < n {
 			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading string data"}
 		}
@@ -105,11 +119,12 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		}
 		return data[n:], nil
 	case reflect.Slice:
-		if len(data) < 4 {
+		nn, rest, err := readUvarint(data)
+		if err != nil {
 			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading slice length"}
 		}
-		n := int(binary.LittleEndian.Uint32(data))
-		data = data[4:]
+		n := int(nn)
+		data = rest
 
 		if rv.Type().Elem().Kind() == reflect.Uint8 {
 			if len(data) < n {
@@ -125,7 +140,6 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		} else {
 			rv.SetLen(n)
 		}
-		var err error
 		for i := 0; i < n; i++ {
 			data, err = unmarshalBinValue(data, rv.Index(i))
 			if err != nil {
@@ -134,14 +148,14 @@ func unmarshalBinValue(data []byte, rv reflect.Value) ([]byte, error) {
 		}
 		return data, nil
 	case reflect.Array:
-		if len(data) < 4 {
+		nn, rest, err := readUvarint(data)
+		if err != nil {
 			return data, &UnmarshalError{Pos: 0, Message: "unexpected EOF reading array length"}
 		}
-		n := int(binary.LittleEndian.Uint32(data))
-		data = data[4:]
+		n := int(nn)
+		data = rest
 
 		limit := rv.Len()
-		var err error
 		for i := 0; i < n; i++ {
 			if i < limit {
 				data, err = unmarshalBinValue(data, rv.Index(i))

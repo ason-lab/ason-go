@@ -901,12 +901,20 @@ func (d *decoder) unmarshalValue(fv reflect.Value) error {
 		if err != nil {
 			return err
 		}
+		// reflect.Value.SetInt panics if v does not fit the sized field
+		// (e.g. 200 into an int8). Reject out-of-range values instead.
+		if fv.OverflowInt(v) {
+			return &UnmarshalError{d.pos, "integer overflows target field"}
+		}
 		fv.SetInt(v)
 
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		v, err := d.parseUint64()
 		if err != nil {
 			return err
+		}
+		if fv.OverflowUint(v) {
+			return &UnmarshalError{d.pos, "integer overflows target field"}
 		}
 		fv.SetUint(v)
 
@@ -991,7 +999,12 @@ func (d *decoder) parseInt64() (int64, error) {
 	var val uint64
 	digits := 0
 	for d.pos < len(d.data) && d.data[d.pos] >= '0' && d.data[d.pos] <= '9' {
-		val = val*10 + uint64(d.data[d.pos]-'0')
+		digit := uint64(d.data[d.pos] - '0')
+		// Detect overflow instead of silently wrapping (data corruption).
+		if val > (^uint64(0)-digit)/10 {
+			return 0, d.errorf("integer overflow")
+		}
+		val = val*10 + digit
 		d.pos++
 		digits++
 	}
@@ -999,7 +1012,14 @@ func (d *decoder) parseInt64() (int64, error) {
 		return 0, d.errorf("invalid number")
 	}
 	if neg {
+		// Magnitude fits in int64 (>= math.MinInt64) exactly when val <= 2^63.
+		if val > 1<<63 {
+			return 0, d.errorf("integer overflow")
+		}
 		return -int64(val), nil
+	}
+	if val > 1<<63-1 {
+		return 0, d.errorf("integer overflow")
 	}
 	return int64(val), nil
 }
@@ -1009,7 +1029,11 @@ func (d *decoder) parseUint64() (uint64, error) {
 	var val uint64
 	digits := 0
 	for d.pos < len(d.data) && d.data[d.pos] >= '0' && d.data[d.pos] <= '9' {
-		val = val*10 + uint64(d.data[d.pos]-'0')
+		digit := uint64(d.data[d.pos] - '0')
+		if val > (^uint64(0)-digit)/10 {
+			return 0, d.errorf("integer overflow")
+		}
+		val = val*10 + digit
 		d.pos++
 		digits++
 	}
@@ -1225,8 +1249,19 @@ func (d *decoder) parseQuotedString() (string, error) {
 				if err != nil {
 					return "", d.errorf("invalid unicode escape")
 				}
-				buf = append(buf, string(rune(cp))...)
 				d.pos += 4
+				r := rune(cp)
+				// Combine a UTF-16 surrogate pair (\uD800-\uDBFF followed by
+				// \uDC00-\uDFFF) into the single astral code point it encodes.
+				if cp >= 0xD800 && cp <= 0xDBFF && d.pos+6 <= len(d.data) &&
+					d.data[d.pos] == '\\' && d.data[d.pos+1] == 'u' {
+					lo, err := strconv.ParseUint(unsafeString(d.data[d.pos+2:d.pos+6]), 16, 32)
+					if err == nil && lo >= 0xDC00 && lo <= 0xDFFF {
+						r = ((rune(cp) - 0xD800) << 10) + (rune(lo) - 0xDC00) + 0x10000
+						d.pos += 6
+					}
+				}
+				buf = append(buf, string(r)...)
 			default:
 				return "", d.errorf("invalid escape: \\%c", esc)
 			}
@@ -1285,7 +1320,7 @@ func unescapePlain(raw []byte) (string, error) {
 			case '@':
 				buf = append(buf, '@')
 			case 'u':
-				if i+4 >= len(raw) {
+				if i+5 > len(raw) {
 					return "", &UnmarshalError{Message: "invalid unicode escape"}
 				}
 				hexStr := unsafeString(raw[i+1 : i+5])
@@ -1293,8 +1328,18 @@ func unescapePlain(raw []byte) (string, error) {
 				if err != nil {
 					return "", &UnmarshalError{Message: "invalid unicode escape"}
 				}
-				buf = append(buf, string(rune(cp))...)
 				i += 4
+				r := rune(cp)
+				// Combine a UTF-16 surrogate pair into its astral code point.
+				if cp >= 0xD800 && cp <= 0xDBFF && i+7 <= len(raw) &&
+					raw[i+1] == '\\' && raw[i+2] == 'u' {
+					lo, err := strconv.ParseUint(unsafeString(raw[i+3:i+7]), 16, 32)
+					if err == nil && lo >= 0xDC00 && lo <= 0xDFFF {
+						r = ((rune(cp) - 0xD800) << 10) + (rune(lo) - 0xDC00) + 0x10000
+						i += 6
+					}
+				}
+				buf = append(buf, string(r)...)
 			default:
 				return "", &UnmarshalError{Message: "invalid escape: \\" + string(rune(raw[i]))}
 			}

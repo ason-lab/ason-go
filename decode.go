@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -192,11 +193,82 @@ func (d *decoder) decodeSliceTop(v any) error {
 // ---------------------------------------------------------------------------
 
 type decoder struct {
-	data []byte
-	pos  int
+	data  []byte
+	pos   int
+	depth int
 }
 
-var schemaFieldsCache sync.Map // map[string][]string
+// maxDepth bounds recursion while parsing nested structures (schema
+// annotations, arrays, tuples, nested structs). Untrusted input could
+// otherwise drive unbounded recursion into a fatal, unrecoverable stack
+// overflow that aborts the whole process (a DoS). 128 is well beyond any
+// realistic nesting yet far below the point where Go's growable goroutine
+// stack is at risk.
+const maxDepth = 128
+
+// enter increments the recursion depth, returning an error if the limit is
+// exceeded. Each successful enter must be paired with a leave (use defer).
+func (d *decoder) enter() error {
+	d.depth++
+	if d.depth > maxDepth {
+		return d.errorf("maximum nesting depth exceeded")
+	}
+	return nil
+}
+
+func (d *decoder) leave() {
+	d.depth--
+}
+
+// boundedCache is a concurrency-safe schema cache with a hard entry cap.
+// Without a cap, every distinct schema in (untrusted) input is retained
+// forever — an unbounded memory-growth DoS. When the cap is reached the whole
+// map is dropped and repopulated; legitimate workloads use a small, stable set
+// of schemas and never hit the cap, while adversarial input degrades only to
+// occasional cache misses (correctness is unaffected). The hot path stays a
+// lock-free sync.Map load.
+type boundedCache struct {
+	m   sync.Map
+	n   atomic.Int64
+	max int64
+}
+
+func (c *boundedCache) Load(key string) (any, bool) {
+	return c.m.Load(key)
+}
+
+// LoadOrStore returns the existing value for key if present; otherwise stores
+// and returns value. It flushes the cache before inserting if the cap is hit.
+func (c *boundedCache) LoadOrStore(key string, value any) (any, bool) {
+	if actual, ok := c.m.Load(key); ok {
+		return actual, true
+	}
+	max := c.max
+	if max <= 0 {
+		max = maxCachedSchemas
+	}
+	if c.n.Load() >= max {
+		c.m.Range(func(k, _ any) bool {
+			c.m.Delete(k)
+			c.n.Add(-1)
+			return true
+		})
+	}
+	actual, loaded := c.m.LoadOrStore(key, value)
+	if !loaded {
+		c.n.Add(1)
+	}
+	return actual, loaded
+}
+
+func (c *boundedCache) Store(key string, value any) {
+	c.LoadOrStore(key, value)
+}
+
+// maxCachedSchemas caps distinct schema headers retained per cache.
+const maxCachedSchemas = 4096
+
+var schemaFieldsCache = boundedCache{max: maxCachedSchemas}
 
 func countTopLevelEntries(data []byte, start int, open, close byte) int {
 	if start >= len(data) || data[start] != open {
@@ -550,6 +622,10 @@ func (d *decoder) parseSchema() ([]string, string, error) {
 }
 
 func (d *decoder) parseSchemaAnnotation() error {
+	if err := d.enter(); err != nil {
+		return err
+	}
+	defer d.leave()
 	if d.pos >= len(d.data) {
 		return d.errorf("expected schema type after '@'")
 	}
@@ -1068,40 +1144,29 @@ func (d *decoder) parseFloat64() (float64, error) {
 	if d.pos == start || (d.pos == start+1 && neg) {
 		return 0, d.errorf("invalid number")
 	}
-	// Fast path: simple decimal without exponent
+	// Fast path: integer-valued (no fractional part, no exponent). Fractional
+	// values must NOT be accumulated as frac += digit*0.1^k — that is not
+	// correctly-rounded (e.g. "0.3" → 0.30000000000000004, "2.675" →
+	// 2.6750000000000003) and breaks round-trip. Those go through
+	// strconv.ParseFloat below, which produces the nearest double.
 	hasExp := d.pos < len(d.data) && (d.data[d.pos] == 'e' || d.data[d.pos] == 'E')
-	if !hasExp && d.pos-start <= 18 {
+	if !hasExp && !hasDot && d.pos-start <= 18 {
 		var intPart uint64
 		p := start
 		if neg {
 			p++
 		}
-		for p < d.pos && d.data[p] != '.' {
+		for p < d.pos {
 			intPart = intPart*10 + uint64(d.data[p]-'0')
 			p++
 		}
-		if !hasDot {
-			v := float64(intPart)
-			if neg {
-				v = -v
-			}
-			return v, nil
-		}
-		p++ // skip '.'
-		var frac float64
-		scale := 0.1
-		for p < d.pos {
-			frac += float64(d.data[p]-'0') * scale
-			scale *= 0.1
-			p++
-		}
-		v := float64(intPart) + frac
+		v := float64(intPart)
 		if neg {
 			v = -v
 		}
 		return v, nil
 	}
-	// Fallback: handle exponent / very long numbers
+	// Fallback: fractional values, exponents, or very long numbers.
 	if hasExp {
 		d.pos++
 		if d.pos < len(d.data) && (d.data[d.pos] == '+' || d.data[d.pos] == '-') {
@@ -1356,6 +1421,10 @@ func unescapePlain(raw []byte) (string, error) {
 // ---------------------------------------------------------------------------
 
 func (d *decoder) parseAnyValue() (any, error) {
+	if err := d.enter(); err != nil {
+		return nil, err
+	}
+	defer d.leave()
 	d.skipWhitespaceAndComments()
 	if d.pos >= len(d.data) || d.atValueEnd() {
 		return nil, nil
@@ -1521,6 +1590,10 @@ func (d *decoder) parseNumberAny() (any, error) {
 // ---------------------------------------------------------------------------
 
 func (d *decoder) unmarshalSlice(fv reflect.Value) error {
+	if err := d.enter(); err != nil {
+		return err
+	}
+	defer d.leave()
 	d.skipWhitespaceAndComments()
 	if d.pos >= len(d.data) || d.data[d.pos] != '[' {
 		return d.errorf("expected '['")
@@ -1627,6 +1700,10 @@ func (d *decoder) unmarshalSlice(fv reflect.Value) error {
 }
 
 func (d *decoder) unmarshalNestedStruct(fv reflect.Value) error {
+	if err := d.enter(); err != nil {
+		return err
+	}
+	defer d.leave()
 	d.skipWhitespaceAndComments()
 	if d.pos >= len(d.data) {
 		return d.errorf("unexpected EOF")

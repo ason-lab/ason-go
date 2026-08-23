@@ -140,52 +140,22 @@ func appendFloat64(buf []byte, v float64) []byte {
 	if math.IsInf(v, 0) || math.IsNaN(v) {
 		return append(buf, '0')
 	}
-	// Integer-valued float: write as int + ".0"
-	_, frac := math.Modf(v)
-	if frac == 0.0 {
-		iv := int64(v)
-		if float64(iv) == v {
-			buf = appendI64(buf, iv)
-			return append(buf, '.', '0')
+	// Integer-valued float: write as int + ".0". Guard against -0.0, whose
+	// sign bit must be preserved — the integer path would drop it.
+	if v != 0 {
+		_, frac := math.Modf(v)
+		if frac == 0.0 {
+			iv := int64(v)
+			if float64(iv) == v {
+				buf = appendI64(buf, iv)
+				return append(buf, '.', '0')
+			}
 		}
 	}
-	// Fast path: one decimal place
-	v10 := v * 10.0
-	_, frac10 := math.Modf(v10)
-	if frac10 == 0.0 && math.Abs(v10) < 1e18 {
-		vi := int64(v10)
-		if vi < 0 {
-			buf = append(buf, '-')
-			vi = -vi
-		}
-		intPart := uint64(vi) / 10
-		fracPart := byte(uint64(vi) % 10)
-		buf = appendU64(buf, intPart)
-		buf = append(buf, '.', '0'+fracPart)
-		return buf
-	}
-	// Fast path: two decimal places
-	v100 := v * 100.0
-	_, frac100 := math.Modf(v100)
-	if frac100 == 0.0 && math.Abs(v100) < 1e18 {
-		vi := int64(v100)
-		if vi < 0 {
-			buf = append(buf, '-')
-			vi = -vi
-		}
-		intPart := uint64(vi) / 100
-		fracIdx := uint64(vi) % 100
-		buf = appendU64(buf, intPart)
-		buf = append(buf, '.')
-		buf = append(buf, decDigits[fracIdx*2])
-		d2 := decDigits[fracIdx*2+1]
-		if d2 != '0' {
-			buf = append(buf, d2)
-		}
-		return buf
-	}
-	// Fallback: use strconv-like formatting via fmt
-	// We use a simple approach: format with enough precision
+	// Non-integer (and signed zero): defer to shortest round-trip formatting.
+	// The hand-rolled 1/2-decimal fast paths were removed — they broke the
+	// shortest round-trip property (e.g. 2.675 → 2.68) and dropped -0.0's sign.
+	// strconv's Ryū-based formatter is both correct and fast.
 	return appendFloatGeneral(buf, v)
 }
 
@@ -393,7 +363,7 @@ type structInfo struct {
 	structType         reflect.Type   // the struct type these fields belong to
 	nameIndex          map[string]int // field name → index in fields slice
 	identityFieldMap   []int
-	fieldMapCache      sync.Map // map[string][]int
+	fieldMapCache      boundedCache // map[string][]int, bounded to avoid unbounded growth
 	headerOnce         sync.Once
 	headerUntyped      []byte
 	headerTyped        []byte

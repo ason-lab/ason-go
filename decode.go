@@ -1318,13 +1318,22 @@ func (d *decoder) parseQuotedString() (string, error) {
 				r := rune(cp)
 				// Combine a UTF-16 surrogate pair (\uD800-\uDBFF followed by
 				// \uDC00-\uDFFF) into the single astral code point it encodes.
-				if cp >= 0xD800 && cp <= 0xDBFF && d.pos+6 <= len(d.data) &&
-					d.data[d.pos] == '\\' && d.data[d.pos+1] == 'u' {
-					lo, err := strconv.ParseUint(unsafeString(d.data[d.pos+2:d.pos+6]), 16, 32)
-					if err == nil && lo >= 0xDC00 && lo <= 0xDFFF {
-						r = ((rune(cp) - 0xD800) << 10) + (rune(lo) - 0xDC00) + 0x10000
-						d.pos += 6
+				if cp >= 0xD800 && cp <= 0xDBFF {
+					// A high surrogate MUST be followed by a \uXXXX low
+					// surrogate; a lone or mispaired high surrogate is invalid
+					// and must be rejected (not silently turned into U+FFFD).
+					if d.pos+6 > len(d.data) || d.data[d.pos] != '\\' || d.data[d.pos+1] != 'u' {
+						return "", d.errorf("invalid unicode escape: unpaired surrogate")
 					}
+					lo, err := strconv.ParseUint(unsafeString(d.data[d.pos+2:d.pos+6]), 16, 32)
+					if err != nil || lo < 0xDC00 || lo > 0xDFFF {
+						return "", d.errorf("invalid unicode escape: unpaired surrogate")
+					}
+					r = ((rune(cp) - 0xD800) << 10) + (rune(lo) - 0xDC00) + 0x10000
+					d.pos += 6
+				} else if cp >= 0xDC00 && cp <= 0xDFFF {
+					// A lone low surrogate is invalid.
+					return "", d.errorf("invalid unicode escape: unpaired surrogate")
 				}
 				buf = append(buf, string(r)...)
 			default:
@@ -1396,13 +1405,21 @@ func unescapePlain(raw []byte) (string, error) {
 				i += 4
 				r := rune(cp)
 				// Combine a UTF-16 surrogate pair into its astral code point.
-				if cp >= 0xD800 && cp <= 0xDBFF && i+7 <= len(raw) &&
-					raw[i+1] == '\\' && raw[i+2] == 'u' {
-					lo, err := strconv.ParseUint(unsafeString(raw[i+3:i+7]), 16, 32)
-					if err == nil && lo >= 0xDC00 && lo <= 0xDFFF {
-						r = ((rune(cp) - 0xD800) << 10) + (rune(lo) - 0xDC00) + 0x10000
-						i += 6
+				if cp >= 0xD800 && cp <= 0xDBFF {
+					// A high surrogate MUST be followed by a \uXXXX low
+					// surrogate; a lone or mispaired high surrogate is invalid.
+					if i+7 > len(raw) || raw[i+1] != '\\' || raw[i+2] != 'u' {
+						return "", &UnmarshalError{Message: "invalid unicode escape: unpaired surrogate"}
 					}
+					lo, err := strconv.ParseUint(unsafeString(raw[i+3:i+7]), 16, 32)
+					if err != nil || lo < 0xDC00 || lo > 0xDFFF {
+						return "", &UnmarshalError{Message: "invalid unicode escape: unpaired surrogate"}
+					}
+					r = ((rune(cp) - 0xD800) << 10) + (rune(lo) - 0xDC00) + 0x10000
+					i += 6
+				} else if cp >= 0xDC00 && cp <= 0xDFFF {
+					// A lone low surrogate is invalid.
+					return "", &UnmarshalError{Message: "invalid unicode escape: unpaired surrogate"}
 				}
 				buf = append(buf, string(r)...)
 			default:

@@ -87,6 +87,41 @@ func TestFix_DecodeFloatPrecision(t *testing.T) {
 	}
 }
 
+// P2-7: \uXXXX escapes must combine surrogate pairs and reject lone/unpaired
+// surrogates instead of silently emitting U+FFFD.
+func TestFix_UnicodeSurrogates(t *testing.T) {
+	type S struct {
+		V string `asun:"v"`
+	}
+	// Valid: surrogate pair for 😀 (U+1F600) and raw astral char must decode.
+	ok := []struct{ in, want string }{
+		{`{v}:("😀")`, "\U0001F600"},
+		{`{v}:("A")`, "A"},
+	}
+	for _, c := range ok {
+		var s S
+		if err := Decode([]byte(c.in), &s); err != nil {
+			t.Fatalf("decode %q: %v", c.in, err)
+		}
+		if s.V != c.want {
+			t.Errorf("decode %q -> %q, want %q", c.in, s.V, c.want)
+		}
+	}
+	// Invalid: lone/unpaired/mispaired surrogates and bad hex must error.
+	bad := []string{
+		`{v}:("\uD800")`,       // lone high surrogate
+		`{v}:("\uDC00")`,       // lone low surrogate
+		`{v}:("\uD83Dabc")`,    // high surrogate not followed by \u
+		`{v}:("\uD800A")`, // high surrogate followed by non-low escape
+	}
+	for _, in := range bad {
+		var s S
+		if err := Decode([]byte(in), &s); err == nil {
+			t.Errorf("expected error for %q, got %q", in, s.V)
+		}
+	}
+}
+
 // encode -0.0 must preserve the sign; float encode must round-trip.
 func TestFix_EncodeFloat(t *testing.T) {
 	if got := string(appendFloat64(nil, math.Copysign(0, -1))); got != "-0.0" {
